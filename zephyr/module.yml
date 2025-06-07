@@ -1,0 +1,4 @@
+name: "nice!oled"
+build:
+  settings:
+    board_root: .

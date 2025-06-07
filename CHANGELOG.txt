@@ -1,0 +1,10 @@
+Changelog file for Structures extra.
+https://github.com/zzuse/zmk-nice-oled-zz/blob/main/CHANGELOG.txt
+
+# FEATURES 0.0.1-beta1 (Jun 06, 2025)
+=======================================
++ NEW FEATURES
+- [x] keycode screen show
+
++ TODO
+- [ ] delete duplicate (in progress)
