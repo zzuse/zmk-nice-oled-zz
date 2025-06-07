@@ -69,4 +69,4 @@ Displays active output profile (BLE/USB)
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 ## Contributors
 - Marcos Chow Castro (Original Author)
-- [Your Name] (Maintainer)  # Replace with your actual name
+- zzuse (Maintainer) Modify to suit my own needs
