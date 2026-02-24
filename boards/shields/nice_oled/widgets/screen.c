@@ -69,7 +69,9 @@ static void draw_canvas(lv_obj_t *widget, lv_color_t cbuf[], const struct status
     // draw_profile_status(canvas, state);
     draw_output_status(canvas, state);
     draw_battery_status(canvas, state);
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     draw_keycode_status(canvas, state);
+#endif
     // Rotate for horizontal display
     rotate_canvas(canvas, cbuf);
 }
@@ -209,6 +211,7 @@ ZMK_SUBSCRIPTION(widget_wpm_status, zmk_wpm_state_changed);
  * 
  **/
 
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 static void set_keycode_status(struct zmk_widget_screen *widget,
                                struct keycode_status_state state) {
     widget->state.keycode = state.keycode;
@@ -234,6 +237,7 @@ struct keycode_status_state keycode_status_get_state(const zmk_event_t *eh) {
 ZMK_DISPLAY_WIDGET_LISTENER(widget_keycode_status, struct keycode_status_state,
                             keycode_status_update_cb, keycode_status_get_state);
 ZMK_SUBSCRIPTION(widget_keycode_status, zmk_keycode_state_changed);
+#endif
 
 /**
  * Initialization
@@ -250,7 +254,9 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     sys_slist_append(&widgets, &widget->node);
     widget_battery_status_init();
     widget_layer_status_init();
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     widget_keycode_status_init();
+#endif
     widget_output_status_init();
     // widget_wpm_status_init();
 

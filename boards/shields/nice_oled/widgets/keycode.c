@@ -3,6 +3,7 @@
 #include <zephyr/kernel.h>
 #include <zmk/hid.h>
 
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 static const char* keycode_to_string(uint32_t keycode, uint16_t usage_page) {
     // Handle standard keyboard keys (HID Usage Page 0x07)
     if (usage_page == HID_USAGE_KEY) {
@@ -97,8 +98,10 @@ static const char* keycode_to_string(uint32_t keycode, uint16_t usage_page) {
     
     return "UNK";
 }
+#endif
 
 void draw_keycode_status(lv_obj_t *canvas, const struct status_state* state) {
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     lv_draw_label_dsc_t label_dsc;
     init_label_dsc(&label_dsc, LVGL_FOREGROUND, &pixel_operator_mono, LV_TEXT_ALIGN_CENTER);
 
@@ -111,4 +114,5 @@ void draw_keycode_status(lv_obj_t *canvas, const struct status_state* state) {
     const char* key_name = keycode_to_string(state->keycode, HID_USAGE_KEY); // HID_USAGE_CONSUMER
     snprintf(btext, sizeof(btext), "%s", key_name);
     lv_canvas_draw_text(canvas, 0, 66, 32, &label_dsc, btext);
+#endif
 }
