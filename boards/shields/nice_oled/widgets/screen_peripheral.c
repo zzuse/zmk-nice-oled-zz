@@ -1,119 +1,108 @@
 #include <zephyr/kernel.h>
-
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #include <zmk/battery.h>
-#include <zmk/ble.h>
 #include <zmk/display.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/battery_state_changed.h>
 #include <zmk/events/split_peripheral_status_changed.h>
-#include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/split/bluetooth/peripheral.h>
 #include <zmk/usb.h>
 
-#include "animation.h"
 #include "battery.h"
 #include "output.h"
 #include "screen_peripheral.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
-/**
- * Draw canvas
- **/
+struct peripheral_labels {
+    lv_obj_t *battery;
+    lv_obj_t *status;
+};
 
-static void draw_canvas(lv_obj_t *widget, lv_color_t cbuf[], const struct status_state *state) {
-    lv_obj_t *canvas = lv_obj_get_child(widget, 0);
+static struct peripheral_labels labels;
 
-    // Draw widgets
-    draw_background(canvas);
-    draw_output_status(canvas, state);
-    draw_battery_status(canvas, state);
-
-    // Rotate for horizontal display
-    rotate_canvas(canvas, cbuf);
+static void vertical_text(char *dst, const char *src, size_t dst_len) {
+    size_t i = 0, j = 0;
+    while (src[i] != '\0' && j + 2 < dst_len) {
+        dst[j++] = src[i++];
+        dst[j++] = '\n';
+    }
+    if (j > 0) dst[j-1] = '\0';
+    else dst[0] = '\0';
 }
 
-/**
- * Battery status
- **/
+static void update_battery_label(lv_obj_t *label, uint8_t level, bool charging) {
+    if (!label) return;
+    char raw[16], vert[32];
+    snprintf(raw, sizeof(raw), "%d%%", level);
+    vertical_text(vert, raw, sizeof(vert));
+    lv_label_set_text(label, vert);
+}
 
-static void set_battery_status(struct zmk_widget_screen *widget,
-                               struct battery_status_state state) {
-
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    widget->state.charging = state.usb_present;
-#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
-
-    widget->state.battery = state.level;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
+static void update_status_label(lv_obj_t *label, bool connected) {
+    if (!label) return;
+    char vert[32];
+    vertical_text(vert, connected ? "CON" : "DIS", sizeof(vert));
+    lv_label_set_text(label, vert);
 }
 
 static void battery_status_update_cb(struct battery_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_battery_status(widget, state); }
+    bool charging = false;
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+    charging = state.usb_present;
+#endif
+    update_battery_label(labels.battery, state.level, charging);
 }
 
 static struct battery_status_state battery_status_get_state(const zmk_event_t *eh) {
-    const struct zmk_battery_state_changed *ev = as_zmk_battery_state_changed(eh);
-
-    return (struct battery_status_state){
-        .level = (ev != NULL) ? ev->state_of_charge : zmk_battery_state_of_charge(),
+    struct battery_status_state state;
+    state.level = zmk_battery_state_of_charge();
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-        .usb_present = zmk_usb_is_powered(),
-#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
-    };
+    state.usb_present = zmk_usb_is_powered();
+#endif
+    return state;
 }
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_battery_status, struct battery_status_state,
                             battery_status_update_cb, battery_status_get_state);
-
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
-#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+#endif
 
-/**
- * Peripheral status
- **/
+static void peripheral_status_update_cb(struct peripheral_status_state state) {
+    update_status_label(labels.status, state.connected);
+}
 
 static struct peripheral_status_state get_state(const zmk_event_t *_eh) {
     return (struct peripheral_status_state){.connected = zmk_split_bt_peripheral_is_connected()};
 }
 
-static void set_connection_status(struct zmk_widget_screen *widget,
-                                  struct peripheral_status_state state) {
-    widget->state.connected = state.connected;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
-
-static void output_status_update_cb(struct peripheral_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_connection_status(widget, state); }
-}
-
 ZMK_DISPLAY_WIDGET_LISTENER(widget_peripheral_status, struct peripheral_status_state,
-                            output_status_update_cb, get_state)
+                            peripheral_status_update_cb, get_state)
 ZMK_SUBSCRIPTION(widget_peripheral_status, zmk_split_peripheral_status_changed);
-
-/**
- * Initialization
- **/
 
 int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     widget->obj = lv_obj_create(parent);
-    lv_obj_set_size(widget->obj, CANVAS_HEIGHT, CANVAS_WIDTH);
+    lv_obj_set_size(widget->obj, 128, 32);
+    lv_obj_set_style_bg_color(widget->obj, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(widget->obj, LV_OPA_COVER, 0);
 
-    lv_obj_t *canvas = lv_canvas_create(widget->obj);
-    lv_obj_align(canvas, LV_ALIGN_TOP_LEFT, 0, 0);
-    lv_canvas_set_buffer(canvas, widget->cbuf, CANVAS_HEIGHT, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
+    labels.battery = lv_label_create(widget->obj);
+    lv_obj_set_style_text_color(labels.battery, lv_color_black(), 0);
+    lv_obj_align(labels.battery, LV_ALIGN_LEFT_MID, 20, 0);
+
+    labels.status = lv_label_create(widget->obj);
+    lv_obj_set_style_text_color(labels.status, lv_color_black(), 0);
+    lv_obj_align(labels.status, LV_ALIGN_CENTER, 0, 0);
 
     sys_slist_append(&widgets, &widget->node);
-    draw_animation(canvas, widget);
+
+    update_battery_label(labels.battery, zmk_battery_state_of_charge(), zmk_usb_is_powered());
+    update_status_label(labels.status, zmk_split_bt_peripheral_is_connected());
+
     widget_battery_status_init();
     widget_peripheral_status_init();
 

@@ -3,15 +3,11 @@
 #include <lvgl.h>
 #include <zmk/endpoints.h>
 
-#define CANVAS_WIDTH 68
-#define CANVAS_HEIGHT 160
+#define CANVAS_WIDTH 32
+#define CANVAS_HEIGHT 128
 
-#define LVGL_BACKGROUND                                                        \
-  IS_ENABLED(CONFIG_NICE_VIEW_WIDGET_INVERTED) ? lv_color_black()              \
-                                               : lv_color_white()
-#define LVGL_FOREGROUND                                                        \
-  IS_ENABLED(CONFIG_NICE_VIEW_WIDGET_INVERTED) ? lv_color_white()              \
-                                               : lv_color_black()
+#define LVGL_BACKGROUND lv_color_white()
+#define LVGL_FOREGROUND lv_color_black()
 
 struct status_state {
   uint8_t battery;
@@ -32,10 +28,14 @@ struct status_state {
 };
 
 void to_uppercase(char *str);
-void rotate_canvas(lv_obj_t *canvas, lv_color_t cbuf[]);
+void rotate_canvas(lv_obj_t *canvas, uint8_t logic_buffer[]);
 void draw_background(lv_obj_t *canvas);
-void init_rect_dsc(lv_draw_rect_dsc_t *rect_dsc, lv_color_t bg_color);
-void init_line_dsc(lv_draw_line_dsc_t *line_dsc, lv_color_t color,
-                   uint8_t width);
 void init_label_dsc(lv_draw_label_dsc_t *label_dsc, lv_color_t color,
                     const lv_font_t *font, lv_text_align_t align);
+
+void init_rect_dsc(lv_draw_rect_dsc_t *rect_dsc, lv_color_t bg_color);
+
+void canvas_draw_text(lv_obj_t *canvas, lv_coord_t x, lv_coord_t y, lv_coord_t max_w,
+                      lv_draw_label_dsc_t *draw_dsc, const char *txt);
+void canvas_draw_img(lv_obj_t *canvas, lv_coord_t x, lv_coord_t y, const lv_image_dsc_t *src,
+                     lv_draw_image_dsc_t *draw_dsc);

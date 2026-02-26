@@ -29,5 +29,5 @@ void draw_layer_status(lv_obj_t *canvas, const struct status_state *state) {
     LV_LOG_WARN("truncated");
   }
 
-  lv_canvas_draw_text(canvas, 0, 32, 68, &label_dsc, text);
+  canvas_draw_text(canvas, 0, 32, 68, &label_dsc, text);
 }

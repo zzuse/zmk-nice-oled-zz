@@ -104,11 +104,11 @@ void draw_keycode_status(lv_obj_t *canvas, const struct status_state* state) {
 
     char text[7];
     snprintf(text, sizeof(text), "%d", state->keycode);
-    lv_canvas_draw_text(canvas, 0, 50, 32, &label_dsc, text);
+    canvas_draw_text(canvas, 0, 50, 32, &label_dsc, text);
 
     
     char btext[9];
     const char* key_name = keycode_to_string(state->keycode, HID_USAGE_KEY); // HID_USAGE_CONSUMER
     snprintf(btext, sizeof(btext), "%s", key_name);
-    lv_canvas_draw_text(canvas, 0, 66, 32, &label_dsc, btext);
+    canvas_draw_text(canvas, 0, 66, 32, &label_dsc, btext);
 }

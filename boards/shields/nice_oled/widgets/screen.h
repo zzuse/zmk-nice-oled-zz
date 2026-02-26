@@ -9,7 +9,7 @@
 struct zmk_widget_screen {
   sys_snode_t node;
   lv_obj_t *obj;
-  lv_color_t cbuf[CANVAS_HEIGHT * CANVAS_HEIGHT];
+  lv_color_t cbuf[1024]; 
   struct status_state state;
 };
 

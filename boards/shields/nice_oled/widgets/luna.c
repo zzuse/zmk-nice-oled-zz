@@ -17,7 +17,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #include "luna.h"
 
-#define SRC(array) (const void **)array, sizeof(array) / sizeof(lv_img_dsc_t *)
+#define SRC(array) (const void **)array, sizeof(array) / sizeof(lv_image_dsc_t *)
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
@@ -32,27 +32,27 @@ LV_IMG_DECLARE(dog_sneak2_90);
 
 // #define ANIMATION_SPEED_IDLE 10000
 #define ANIMATION_SPEED_IDLE 960
-const lv_img_dsc_t *idle_imgs[] = {
+const lv_image_dsc_t *idle_imgs[] = {
     &dog_sit1_90,
     &dog_sit2_90,
 };
 
 // #define ANIMATION_SPEED_SLOW 2000
 #define ANIMATION_SPEED_SLOW 200
-const lv_img_dsc_t *slow_imgs[] = {
+const lv_image_dsc_t *slow_imgs[] = {
     &dog_walk1_90,
     &dog_walk2_90,
 };
 
 // #define ANIMATION_SPEED_MID 500
 #define ANIMATION_SPEED_MID 200
-const lv_img_dsc_t *mid_imgs[] = {
+const lv_image_dsc_t *mid_imgs[] = {
     &dog_walk1_90,
     &dog_walk2_90,
 };
 
 #define ANIMATION_SPEED_FAST 200
-const lv_img_dsc_t *fast_imgs[] = {
+const lv_image_dsc_t *fast_imgs[] = {
     &dog_run1_90,
     &dog_run2_90,
 };

@@ -24,7 +24,7 @@ LV_IMG_DECLARE(crystal_14);
 LV_IMG_DECLARE(crystal_15);
 LV_IMG_DECLARE(crystal_16);
 
-const lv_img_dsc_t *crystal_imgs[] = {
+const lv_image_dsc_t *crystal_imgs[] = {
     &crystal_01, &crystal_02, &crystal_03, &crystal_04, &crystal_05, &crystal_06,
     &crystal_07, &crystal_08, &crystal_09, &crystal_10, &crystal_11, &crystal_12,
     &crystal_13, &crystal_14, &crystal_15, &crystal_16,
@@ -53,7 +53,7 @@ LV_IMG_DECLARE(pokemon18);
 LV_IMG_DECLARE(pokemon19);
 LV_IMG_DECLARE(pokemon20);
 
-const lv_img_dsc_t *pokemon_imgs[] = {
+const lv_image_dsc_t *pokemon_imgs[] = {
     &pokemon01, &pokemon02, &pokemon03, &pokemon04, &pokemon05, &pokemon06, &pokemon07,
     &pokemon08, &pokemon09, &pokemon10, &pokemon11, &pokemon12, &pokemon13, &pokemon14,
     &pokemon15, &pokemon16, &pokemon17, &pokemon18, &pokemon19, &pokemon20,
@@ -77,16 +77,7 @@ void draw_animation(lv_obj_t *canvas, struct zmk_widget_screen *widget) {
     lv_obj_t *art = NULL;
     lv_obj_t *art2 = NULL;
 
-#if IS_ENABLED(CONFIG_NICE_OLED_GEM_ANIMATION)
-    art = lv_animimg_create(widget->obj);
-    lv_obj_center(art);
-
-    lv_animimg_set_src(art, (const void **)crystal_imgs, 16);
-    lv_animimg_set_duration(art, CONFIG_NICE_OLED_GEM_ANIMATION_MS);
-    lv_animimg_set_repeat_count(art, LV_ANIM_REPEAT_INFINITE);
-    lv_animimg_start(art);
-
-#elif IS_ENABLED(CONFIG_NICE_OLED_POKEMON_ANIMATION)
+#if IS_ENABLED(CONFIG_NICE_OLED_POKEMON_ANIMATION)
     /* If we have the Pokémon animation enabled */
     art = lv_animimg_create(widget->obj);
     lv_obj_center(art);
@@ -95,48 +86,26 @@ void draw_animation(lv_obj_t *canvas, struct zmk_widget_screen *widget) {
     lv_animimg_set_duration(art, CONFIG_NICE_OLED_POKEMON_ANIMATION_MS);
     lv_animimg_set_repeat_count(art, LV_ANIM_REPEAT_INFINITE);
     lv_animimg_start(art);
-
-#else
-    /* If we do not want animation (for example, config nice oled gem animation
-     * = n) Then we load a fixed image (you can choose it or make it random).
-     * IMPORTANT: Crystal IMGS must be defined in some #if previous or
-     * elsewhere. If not, you should create your arrangement with fixed images.
-     */
-
-    /* Random image example: */
-    int length = sizeof(crystal_imgs) / sizeof(crystal_imgs[0]);
-    srand(k_uptime_get_32());
-    int random_index = rand() % length;
-
-    art = lv_img_create(widget->obj);
-    lv_img_set_src(art, crystal_imgs[random_index]);
 #endif
 
 #if IS_ENABLED(CONFIG_NICE_OLED_VIM)
     /* Additional fixed image example */
-    art2 = lv_img_create(widget->obj);
-    lv_img_set_src(art2, FIXED_IMAGE_1);
+    art2 = lv_image_create(widget->obj);
+    lv_image_set_src(art2, FIXED_IMAGE_1);
 #endif
 
 #if IS_ENABLED(CONFIG_NICE_OLED_VIP_MARCOS)
     /* Another additional fixed image */
     if (!art2) {
-        art2 = lv_img_create(widget->obj);
+        art2 = lv_image_create(widget->obj);
     }
-    lv_img_set_src(art2, FIXED_IMAGE_2);
+    lv_image_set_src(art2, FIXED_IMAGE_2);
 #endif
 
     /* Finally, we position if there is something in art or art2 */
     if (art) {
-#if IS_ENABLED(CONFIG_NICE_OLED_GEM_ANIMATION)
-        /* coordinate adjustment if it was Gem animation */
-        lv_obj_align(art, LV_ALIGN_TOP_LEFT, 18, -18);
-#elif IS_ENABLED(CONFIG_NICE_OLED_POKEMON_ANIMATION)
-        /* coordinate adjustment if it was the Pokémon animation */
-        lv_obj_align(art, LV_ALIGN_TOP_LEFT, -40, -18);
-#else
-        /* Fixed image adjustment */
-        lv_obj_align(art, LV_ALIGN_TOP_LEFT, 18, -18);
+#if IS_ENABLED(CONFIG_NICE_OLED_POKEMON_ANIMATION)
+        lv_obj_align(art, LV_ALIGN_TOP_LEFT, 35, -18);
 #endif
     }
 

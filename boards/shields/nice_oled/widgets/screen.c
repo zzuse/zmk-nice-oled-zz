@@ -1,5 +1,4 @@
 #include <zephyr/kernel.h>
-
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
@@ -13,120 +12,98 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/events/endpoint_changed.h>
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/events/usb_conn_state_changed.h>
-#include <zmk/events/wpm_state_changed.h>
-#include <zmk/events/keycode_state_changed.h>
 #include <zmk/keymap.h>
 #include <zmk/usb.h>
-#include <zmk/wpm.h>
 
 #include "battery.h"
 #include "layer.h"
 #include "output.h"
-#include "profile.h"
 #include "screen.h"
-#include "keycode.h"
-#include "wpm.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
-/**
- * luna
- **/
+struct screen_labels {
+    lv_obj_t *battery;
+    lv_obj_t *layer;
+    lv_obj_t *output;
+};
 
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_WPM)
-#include "luna.h"
-static struct zmk_widget_luna luna_widget;
-#endif
+static struct screen_labels labels;
 
-/**
- * modifiers
- **/
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_MODIFIERS_INDICATORS)
-#include "modifiers.h"                               // Incluir el archivo de cabecera de modifiers
-static struct zmk_widget_modifiers modifiers_widget; // Declarar el widget de modifiers
-#endif
-
-/**
- * hid indicators
- **/
-
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_HID_INDICATORS)
-#include "hid_indicators.h"
-static struct zmk_widget_hid_indicators hid_indicators_widget;
-#endif
-
-/**
- * Draw canvas
- **/
-
-static void draw_canvas(lv_obj_t *widget, lv_color_t cbuf[], const struct status_state *state) {
-    lv_obj_t *canvas = lv_obj_get_child(widget, 0);
-
-    // Draw widgets
-    draw_background(canvas);
-    draw_layer_status(canvas, state);
-    // draw_wpm_status(canvas, state);
-    // draw_profile_status(canvas, state);
-    draw_output_status(canvas, state);
-    draw_battery_status(canvas, state);
-    draw_keycode_status(canvas, state);
-    // Rotate for horizontal display
-    rotate_canvas(canvas, cbuf);
+// Helper to make text vertical using newlines
+static void vertical_text(char *dst, const char *src, size_t dst_len) {
+    size_t i = 0, j = 0;
+    while (src[i] != '\0' && j + 2 < dst_len) {
+        dst[j++] = src[i++];
+        dst[j++] = '\n';
+    }
+    if (j > 0) dst[j-1] = '\0'; // Remove last newline
+    else dst[0] = '\0';
 }
 
-/**
- * Battery status
- **/
+static void update_battery_label(lv_obj_t *label, uint8_t level, bool charging) {
+    if (!label) return;
+    char raw[16], vert[32];
+    snprintf(raw, sizeof(raw), "%d%%", level);
+    vertical_text(vert, raw, sizeof(vert));
+    lv_label_set_text(label, vert);
+}
 
-static void set_battery_status(struct zmk_widget_screen *widget,
-                               struct battery_status_state state) {
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    widget->state.charging = state.usb_present;
-#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+static void update_layer_label(lv_obj_t *label, uint8_t index, const char *label_text) {
+    if (!label) return;
+    char raw[16], vert[32];
+    if (label_text != NULL) {
+        snprintf(raw, sizeof(raw), "%c", label_text[0]); // Just first char for width
+    } else {
+        snprintf(raw, sizeof(raw), "%d", index);
+    }
+    vertical_text(vert, raw, sizeof(vert));
+    lv_label_set_text(label, vert);
+}
 
-    widget->state.battery = state.level;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
+static void update_output_label(lv_obj_t *label) {
+    if (!label) return;
+    struct zmk_endpoint_instance endpoint = zmk_endpoint_get_selected();
+    char vert[32];
+    switch (endpoint.transport) {
+    case ZMK_TRANSPORT_USB: vertical_text(vert, "USB", sizeof(vert)); break;
+    case ZMK_TRANSPORT_BLE: {
+        char raw[8];
+        snprintf(raw, sizeof(raw), "B%d", endpoint.ble.profile_index + 1);
+        vertical_text(vert, raw, sizeof(vert));
+        break;
+    }
+    default: vertical_text(vert, "OFF", sizeof(vert)); break;
+    }
+    lv_label_set_text(label, vert);
 }
 
 static void battery_status_update_cb(struct battery_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_battery_status(widget, state); }
+    bool charging = false;
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+    charging = state.usb_present;
+#endif
+    update_battery_label(labels.battery, state.level, charging);
 }
 
 static struct battery_status_state battery_status_get_state(const zmk_event_t *eh) {
-    const struct zmk_battery_state_changed *ev = as_zmk_battery_state_changed(eh);
-
-    return (struct battery_status_state){
-        .level = (ev != NULL) ? ev->state_of_charge : zmk_battery_state_of_charge(),
+    struct battery_status_state state;
+    state.level = zmk_battery_state_of_charge();
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-        .usb_present = zmk_usb_is_powered(),
-#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
-    };
+    state.usb_present = zmk_usb_is_powered();
+#endif
+    return state;
 }
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_battery_status, struct battery_status_state,
                             battery_status_update_cb, battery_status_get_state);
-
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
-#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
-
-/**
- * Layer status
- **/
-
-static void set_layer_status(struct zmk_widget_screen *widget, struct layer_status_state state) {
-    widget->state.layer_index = state.index;
-    widget->state.layer_label = state.label;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
+#endif
 
 static void layer_status_update_cb(struct layer_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_layer_status(widget, state); }
+    update_layer_label(labels.layer, state.index, state.label);
 }
 
 static struct layer_status_state layer_status_get_state(const zmk_event_t *eh) {
@@ -136,136 +113,57 @@ static struct layer_status_state layer_status_get_state(const zmk_event_t *eh) {
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_layer_status, struct layer_status_state, layer_status_update_cb,
                             layer_status_get_state)
-
 ZMK_SUBSCRIPTION(widget_layer_status, zmk_layer_state_changed);
 
-/**
- * Output status
- **/
-
-static void set_output_status(struct zmk_widget_screen *widget,
-                              const struct output_status_state *state) {
-    widget->state.selected_endpoint = state->selected_endpoint;
-    widget->state.active_profile_index = state->active_profile_index;
-    widget->state.active_profile_connected = state->active_profile_connected;
-    widget->state.active_profile_bonded = state->active_profile_bonded;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
-
 static void output_status_update_cb(struct output_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_output_status(widget, &state); }
+    update_output_label(labels.output);
 }
 
 static struct output_status_state output_status_get_state(const zmk_event_t *_eh) {
-    return (struct output_status_state){
-        .selected_endpoint = zmk_endpoints_selected(),
-        .active_profile_index = zmk_ble_active_profile_index(),
-        .active_profile_connected = zmk_ble_active_profile_is_connected(),
-        .active_profile_bonded = !zmk_ble_active_profile_is_open(),
-    };
+    struct output_status_state state;
+    state.selected_endpoint = zmk_endpoint_get_selected();
+    state.active_profile_index = zmk_ble_active_profile_index();
+    state.active_profile_connected = zmk_ble_active_profile_is_connected();
+    state.active_profile_bonded = !zmk_ble_active_profile_is_open();
+    return state;
 }
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_output_status, struct output_status_state,
                             output_status_update_cb, output_status_get_state)
 ZMK_SUBSCRIPTION(widget_output_status, zmk_endpoint_changed);
-
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-ZMK_SUBSCRIPTION(widget_output_status, zmk_usb_conn_state_changed);
-#endif
 #if defined(CONFIG_ZMK_BLE)
 ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_active_profile_changed);
 #endif
 
-/**
- * WPM status
- **/
-
-static void set_wpm_status(struct zmk_widget_screen *widget, struct wpm_status_state state) {
-    for (int i = 0; i < 9; i++) {
-        widget->state.wpm[i] = widget->state.wpm[i + 1];
-    }
-    widget->state.wpm[9] = state.wpm;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
-
-static void wpm_status_update_cb(struct wpm_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_wpm_status(widget, state); }
-}
-
-struct wpm_status_state wpm_status_get_state(const zmk_event_t *eh) {
-    return (struct wpm_status_state){.wpm = zmk_wpm_get_state()};
-};
-
-ZMK_DISPLAY_WIDGET_LISTENER(widget_wpm_status, struct wpm_status_state, wpm_status_update_cb,
-                            wpm_status_get_state)
-ZMK_SUBSCRIPTION(widget_wpm_status, zmk_wpm_state_changed);
-
-/**
- * KeyCode
- * 
- **/
-
-static void set_keycode_status(struct zmk_widget_screen *widget,
-                               struct keycode_status_state state) {
-    widget->state.keycode = state.keycode;
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
-
-static void keycode_status_update_cb(struct keycode_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_keycode_status(widget, state); }
-}
-
-static uint32_t last_keycode = 0;
-
-struct keycode_status_state keycode_status_get_state(const zmk_event_t *eh) {
-    const struct zmk_keycode_state_changed *ev = as_zmk_keycode_state_changed(eh);
-    if (ev->state) { // Only on key press, not release
-        last_keycode = ev->keycode;
-        // Optionally trigger a redraw here
-    }
-    return (struct keycode_status_state){.keycode = last_keycode };
-}
-// // Register the listener
-ZMK_DISPLAY_WIDGET_LISTENER(widget_keycode_status, struct keycode_status_state,
-                            keycode_status_update_cb, keycode_status_get_state);
-ZMK_SUBSCRIPTION(widget_keycode_status, zmk_keycode_state_changed);
-
-/**
- * Initialization
- **/
-
 int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     widget->obj = lv_obj_create(parent);
-    lv_obj_set_size(widget->obj, CANVAS_HEIGHT, CANVAS_WIDTH);
+    lv_obj_set_size(widget->obj, 128, 32);
+    lv_obj_set_style_bg_color(widget->obj, lv_color_white(), 0); // Black due to inversion
+    lv_obj_set_style_bg_opa(widget->obj, LV_OPA_COVER, 0);
 
-    lv_obj_t *canvas = lv_canvas_create(widget->obj);
-    lv_obj_align(canvas, LV_ALIGN_TOP_LEFT, 0, 0);
-    lv_canvas_set_buffer(canvas, widget->cbuf, CANVAS_HEIGHT, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
+    // Layout labels horizontally across the wide screen, but they are vertical strings
+    labels.battery = lv_label_create(widget->obj);
+    lv_obj_set_style_text_color(labels.battery, lv_color_black(), 0); 
+    lv_obj_align(labels.battery, LV_ALIGN_LEFT_MID, 10, 0);
+
+    labels.output = lv_label_create(widget->obj);
+    lv_obj_set_style_text_color(labels.output, lv_color_black(), 0);
+    lv_obj_align(labels.output, LV_ALIGN_CENTER, 0, 0);
+
+    labels.layer = lv_label_create(widget->obj);
+    lv_obj_set_style_text_color(labels.layer, lv_color_black(), 0);
+    lv_obj_align(labels.layer, LV_ALIGN_RIGHT_MID, -10, 0);
 
     sys_slist_append(&widgets, &widget->node);
+
+    // Initial updates
+    update_battery_label(labels.battery, zmk_battery_state_of_charge(), zmk_usb_is_powered());
+    update_layer_label(labels.layer, zmk_keymap_highest_layer_active(), zmk_keymap_layer_name(zmk_keymap_highest_layer_active()));
+    update_output_label(labels.output);
+
     widget_battery_status_init();
     widget_layer_status_init();
-    widget_keycode_status_init();
     widget_output_status_init();
-    // widget_wpm_status_init();
-
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_WPM)
-    zmk_widget_luna_init(&luna_widget, canvas);
-    lv_obj_align(zmk_widget_luna_obj(&luna_widget), LV_ALIGN_TOP_LEFT, 36, 0);
-#endif
-
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_HID_INDICATORS)
-    zmk_widget_hid_indicators_init(&hid_indicators_widget, canvas);
-#endif
-
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_MODIFIERS_INDICATORS)
-    zmk_widget_modifiers_init(&modifiers_widget, canvas); // Inicializar el widget de modifiers
-#endif
 
     return 0;
 }

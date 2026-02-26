@@ -22,7 +22,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 LV_IMG_DECLARE(dog_bark1_90);
 LV_IMG_DECLARE(dog_bark2_90);
 
-const lv_img_dsc_t *luna_imgs_bark_90[] = {&dog_bark1_90, &dog_bark2_90};
+const lv_image_dsc_t *luna_imgs_bark_90[] = {&dog_bark1_90, &dog_bark2_90};
 static lv_obj_t *hid_anim = NULL;
 
 struct hid_indicators_state {

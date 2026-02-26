@@ -32,10 +32,10 @@ LV_IMG_DECLARE(dog_run2_90);
 LV_IMG_DECLARE(dog_sneak1_90);
 LV_IMG_DECLARE(dog_sneak2_90);
 
-const lv_img_dsc_t *luna_imgs_sit_90[] = {&dog_sit1_90, &dog_sit2_90};
-const lv_img_dsc_t *luna_imgs_walk_90[] = {&dog_walk1_90, &dog_walk2_90};
-const lv_img_dsc_t *luna_imgs_run_90[] = {&dog_run1_90, &dog_run2_90};
-const lv_img_dsc_t *luna_imgs_sneak_90[] = {&dog_sneak1_90, &dog_sneak2_90};
+const lv_image_dsc_t *luna_imgs_sit_90[] = {&dog_sit1_90, &dog_sit2_90};
+const lv_image_dsc_t *luna_imgs_walk_90[] = {&dog_walk1_90, &dog_walk2_90};
+const lv_image_dsc_t *luna_imgs_run_90[] = {&dog_run1_90, &dog_run2_90};
+const lv_image_dsc_t *luna_imgs_sneak_90[] = {&dog_sneak1_90, &dog_sneak2_90};
 
 static lv_obj_t *luna_imgs = NULL;
 
