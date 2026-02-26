@@ -10,8 +10,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/split/bluetooth/peripheral.h>
 #include <zmk/usb.h>
 
-#include "battery.h"
-#include "output.h"
 #include "screen_peripheral.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
@@ -49,28 +47,21 @@ static void update_status_label(lv_obj_t *label, bool connected) {
 }
 
 static void battery_status_update_cb(struct battery_status_state state) {
-    bool charging = false;
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    charging = state.usb_present;
-#endif
-    update_battery_label(labels.battery, state.level, charging);
+    update_battery_label(labels.battery, state.level, state.usb_present);
 }
 
 static struct battery_status_state battery_status_get_state(const zmk_event_t *eh) {
-    struct battery_status_state state;
-    state.level = zmk_battery_state_of_charge();
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    state.usb_present = zmk_usb_is_powered();
-#endif
-    return state;
+    const struct zmk_battery_state_changed *ev = as_zmk_battery_state_changed(eh);
+    return (struct battery_status_state){
+        .level = (ev != NULL) ? ev->state_of_charge : zmk_battery_state_of_charge(),
+        .usb_present = zmk_usb_is_powered(),
+    };
 }
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_battery_status, struct battery_status_state,
                             battery_status_update_cb, battery_status_get_state);
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
-#endif
 
 static void peripheral_status_update_cb(struct peripheral_status_state state) {
     update_status_label(labels.status, state.connected);

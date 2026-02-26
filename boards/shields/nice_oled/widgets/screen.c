@@ -15,9 +15,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/keymap.h>
 #include <zmk/usb.h>
 
-#include "battery.h"
-#include "layer.h"
-#include "output.h"
 #include "screen.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
@@ -53,7 +50,7 @@ static void update_layer_label(lv_obj_t *label, uint8_t index, const char *label
     if (!label) return;
     char raw[16], vert[32];
     if (label_text != NULL) {
-        snprintf(raw, sizeof(raw), "%c", label_text[0]); // Just first char for width
+        snprintf(raw, sizeof(raw), "%c", label_text[0]);
     } else {
         snprintf(raw, sizeof(raw), "%d", index);
     }
@@ -79,28 +76,21 @@ static void update_output_label(lv_obj_t *label) {
 }
 
 static void battery_status_update_cb(struct battery_status_state state) {
-    bool charging = false;
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    charging = state.usb_present;
-#endif
-    update_battery_label(labels.battery, state.level, charging);
+    update_battery_label(labels.battery, state.level, state.usb_present);
 }
 
 static struct battery_status_state battery_status_get_state(const zmk_event_t *eh) {
-    struct battery_status_state state;
-    state.level = zmk_battery_state_of_charge();
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    state.usb_present = zmk_usb_is_powered();
-#endif
-    return state;
+    const struct zmk_battery_state_changed *ev = as_zmk_battery_state_changed(eh);
+    return (struct battery_status_state){
+        .level = (ev != NULL) ? ev->state_of_charge : zmk_battery_state_of_charge(),
+        .usb_present = zmk_usb_is_powered(),
+    };
 }
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_battery_status, struct battery_status_state,
                             battery_status_update_cb, battery_status_get_state);
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
-#endif
 
 static void layer_status_update_cb(struct layer_status_state state) {
     update_layer_label(labels.layer, state.index, state.label);
@@ -120,20 +110,13 @@ static void output_status_update_cb(struct output_status_state state) {
 }
 
 static struct output_status_state output_status_get_state(const zmk_event_t *_eh) {
-    struct output_status_state state;
-    state.selected_endpoint = zmk_endpoint_get_selected();
-    state.active_profile_index = zmk_ble_active_profile_index();
-    state.active_profile_connected = zmk_ble_active_profile_is_connected();
-    state.active_profile_bonded = !zmk_ble_active_profile_is_open();
-    return state;
+    return (struct output_status_state){};
 }
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_output_status, struct output_status_state,
                             output_status_update_cb, output_status_get_state)
 ZMK_SUBSCRIPTION(widget_output_status, zmk_endpoint_changed);
-#if defined(CONFIG_ZMK_BLE)
 ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_active_profile_changed);
-#endif
 
 int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     widget->obj = lv_obj_create(parent);
@@ -141,7 +124,6 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     lv_obj_set_style_bg_color(widget->obj, lv_color_white(), 0); // Black due to inversion
     lv_obj_set_style_bg_opa(widget->obj, LV_OPA_COVER, 0);
 
-    // Layout labels horizontally across the wide screen, but they are vertical strings
     labels.battery = lv_label_create(widget->obj);
     lv_obj_set_style_text_color(labels.battery, lv_color_black(), 0); 
     lv_obj_align(labels.battery, LV_ALIGN_LEFT_MID, 10, 0);
@@ -156,7 +138,6 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
 
     sys_slist_append(&widgets, &widget->node);
 
-    // Initial updates
     update_battery_label(labels.battery, zmk_battery_state_of_charge(), zmk_usb_is_powered());
     update_layer_label(labels.layer, zmk_keymap_highest_layer_active(), zmk_keymap_layer_name(zmk_keymap_highest_layer_active()));
     update_output_label(labels.output);
