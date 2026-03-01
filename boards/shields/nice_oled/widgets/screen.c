@@ -36,7 +36,7 @@ static void draw_text(int x, int y, const char *text) {
     lv_canvas_finish_layer(logic_canvas, &layer);
 }
 
-static void draw_full_canvas(lv_obj_t *widget_obj) {
+static void draw_full_canvas(lv_obj_t *widget_obj, const struct status_state *state) {
     if (!logic_canvas) return;
     lv_obj_t *phys_canvas = lv_obj_get_child(widget_obj, 0);
 
@@ -45,31 +45,22 @@ static void draw_full_canvas(lv_obj_t *widget_obj) {
     
     // 2. Draw Battery
     char bat_buf[16];
-    snprintf(bat_buf, sizeof(bat_buf), "%d%%", zmk_battery_state_of_charge());
+    snprintf(bat_buf, sizeof(bat_buf), "%d%%", state->battery);
     draw_text(2, 5, bat_buf);
     
-    // 3. Draw Output
-    struct zmk_endpoint_instance endpoint = zmk_endpoint_get_selected();
-    if (endpoint.transport == ZMK_TRANSPORT_USB) {
-        draw_text(2, 55, "USB");
-    } else if (endpoint.transport == ZMK_TRANSPORT_BLE) {
-        char out_buf[8];
-        snprintf(out_buf, sizeof(out_buf), "B%d", endpoint.ble.profile_index + 1);
-        draw_text(2, 55, out_buf);
-    }
-    
-    // 4. Draw Layer
-    char lay_buf[16];
-    snprintf(lay_buf, sizeof(lay_buf), "L%d", zmk_keymap_highest_layer_active());
-    draw_text(2, 105, lay_buf);
-
     // 5. Rotate logic to physical
     rotate_canvas(phys_canvas, (lv_color_t*)logic_buffer);
 }
 
+static void set_battery_status(struct zmk_widget_screen *widget, struct battery_status_state state) {
+    widget->state.battery = state.level;
+    widget->state.charging = state.usb_present;
+    draw_full_canvas(widget->obj, &widget->state);
+}
+
 static void battery_status_update_cb(struct battery_status_state state) {
     struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { draw_full_canvas(widget->obj); }
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_battery_status(widget, state); }
 }
 static struct battery_status_state battery_status_get_state(const zmk_event_t *eh) { 
     return (struct battery_status_state){.level = zmk_battery_state_of_charge()};
@@ -77,24 +68,6 @@ static struct battery_status_state battery_status_get_state(const zmk_event_t *e
 ZMK_DISPLAY_WIDGET_LISTENER(widget_battery_status, struct battery_status_state, battery_status_update_cb, battery_status_get_state);
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
-
-static void layer_status_update_cb(struct layer_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { draw_full_canvas(widget->obj); }
-}
-static struct layer_status_state layer_status_get_state(const zmk_event_t *eh) { 
-    return (struct layer_status_state){.index = zmk_keymap_highest_layer_active()};
-}
-ZMK_DISPLAY_WIDGET_LISTENER(widget_layer_status, struct layer_status_state, layer_status_update_cb, layer_status_get_state);
-ZMK_SUBSCRIPTION(widget_layer_status, zmk_layer_state_changed);
-
-static void output_status_update_cb(struct output_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { draw_full_canvas(widget->obj); }
-}
-static struct output_status_state output_status_get_state(const zmk_event_t *_eh) { return (struct output_status_state){}; }
-ZMK_DISPLAY_WIDGET_LISTENER(widget_output_status, struct output_status_state, output_status_update_cb, output_status_get_state);
-ZMK_SUBSCRIPTION(widget_output_status, zmk_endpoint_changed);
 
 int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     widget->obj = lv_obj_create(parent);
@@ -118,11 +91,9 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     }
 
     sys_slist_append(&widgets, &widget->node);
-    draw_full_canvas(widget->obj);
+    // draw_full_canvas(widget->obj, &widget->state);
 
     widget_battery_status_init();
-    widget_layer_status_init();
-    widget_output_status_init();
 
     return 0;
 }

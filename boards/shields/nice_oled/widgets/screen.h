@@ -11,18 +11,10 @@ struct battery_status_state {
     bool usb_present;
 };
 
-struct layer_status_state {
-    uint8_t index;
-    const char *label;
-};
-
-struct output_status_state {
-};
-
 struct zmk_widget_screen {
   sys_snode_t node;
   lv_obj_t *obj;
-  lv_color_t cbuf[528 / sizeof(lv_color_t)]; // 128*32/8 + 8 palette + padding
+  uint8_t cbuf[LV_CANVAS_BUF_SIZE(CANVAS_HEIGHT, CANVAS_HEIGHT, 16, LV_DRAW_BUF_STRIDE_ALIGN)];
   struct status_state state;
 };
 
