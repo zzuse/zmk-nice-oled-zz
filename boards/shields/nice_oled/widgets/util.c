@@ -1,11 +1,11 @@
 #include "util.h"
 #include <zephyr/kernel.h>
 
-void rotate_canvas(lv_obj_t *canvas, lv_color_t cbuf[]) {
-    // cbuf is 128x128 logical square including 8-byte palette
-    // target is 128x32 physical including 8-byte palette
-    uint8_t *src_pixels = ((uint8_t *)cbuf) + 8;
-    uint8_t *dst_pixels = ((uint8_t *)lv_canvas_get_draw_buf(canvas)->data) + 8;
+void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas) {
+    // logic_canvas is 128x128 logical square
+    // phys_canvas is 128x32 physical
+    uint8_t *src_pixels = ((uint8_t *)lv_canvas_get_draw_buf(logic_canvas)->data) + 8;
+    uint8_t *dst_pixels = ((uint8_t *)lv_canvas_get_draw_buf(phys_canvas)->data) + 8;
     
     // Clear destination pixels to white (unlit)
     memset(dst_pixels, 0xFF, 512);
@@ -33,13 +33,5 @@ void rotate_canvas(lv_obj_t *canvas, lv_color_t cbuf[]) {
 }
 
 void draw_background(lv_obj_t *canvas) {
-  lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
-}
-
-void init_label_dsc(lv_draw_label_dsc_t *label_dsc, lv_color_t color,
-                    const lv_font_t *font, lv_text_align_t align) {
-  lv_draw_label_dsc_init(label_dsc);
-  label_dsc->color = color;
-  label_dsc->font = font;
-  label_dsc->align = align;
+  lv_canvas_fill_bg(canvas, LVGL_BACKGROUND, LV_OPA_COVER);
 }

@@ -7,8 +7,8 @@
 #define CANVAS_HEIGHT 128
 #define ROTATION_SIZE 128
 
-#define LVGL_BACKGROUND lv_color_white()
-#define LVGL_FOREGROUND lv_color_black()
+#define LVGL_BACKGROUND lv_color_make(0, 0, 1)
+#define LVGL_FOREGROUND lv_color_make(0, 0, 0)
 
 struct status_state {
   uint8_t battery;
@@ -25,7 +25,5 @@ struct status_state {
 #endif
 };
 
-void rotate_canvas(lv_obj_t *canvas, lv_color_t cbuf[]);
+void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas);
 void draw_background(lv_obj_t *canvas);
-void init_label_dsc(lv_draw_label_dsc_t *label_dsc, lv_color_t color,
-                    const lv_font_t *font, lv_text_align_t align);
