@@ -27,3 +27,4 @@ struct status_state {
 
 void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas);
 void draw_background(lv_obj_t *canvas);
+uint8_t get_natural_battery_level(void);

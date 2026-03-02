@@ -1,6 +1,10 @@
 #include "util.h"
 #include <zephyr/kernel.h>
 
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/devicetree.h>
+#include <zmk/battery.h>
+
 void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas) {
     // logic_canvas is 128x128 logical square
     // phys_canvas is 128x32 physical
@@ -40,4 +44,24 @@ void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas) {
 
 void draw_background(lv_obj_t *canvas) {
   lv_canvas_fill_bg(canvas, LVGL_BACKGROUND, LV_OPA_COVER);
+}
+
+uint8_t get_natural_battery_level(void) {
+    const struct device *batt_dev = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zmk_battery));
+    if (batt_dev == NULL || !device_is_ready(batt_dev)) return zmk_battery_state_of_charge();
+
+    struct sensor_value voltage;
+    if (sensor_sample_fetch_chan(batt_dev, SENSOR_CHAN_GAUGE_VOLTAGE) != 0) {
+        return zmk_battery_state_of_charge();
+    }
+    sensor_channel_get(batt_dev, SENSOR_CHAN_GAUGE_VOLTAGE, &voltage);
+    
+    int16_t mv = voltage.val1 * 1000 + (voltage.val2 / 1000);
+
+    if (mv >= 4150) return 100;
+    if (mv >= 4000) return 90 + (mv - 4000) * 10 / 150;
+    if (mv >= 3700) return 50 + (mv - 3700) * 40 / 300;
+    if (mv >= 3500) return 10 + (mv - 3500) * 40 / 200;
+    if (mv >= 3400) return (mv - 3400) * 10 / 100;
+    return 0;
 }

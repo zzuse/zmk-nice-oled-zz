@@ -3,20 +3,22 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #include <zmk/battery.h>
+#include <zmk/ble.h>
 #include <zmk/display.h>
+#include <zmk/endpoints.h>
+#include <zmk/event_manager.h>
+#include <zmk/events/battery_state_changed.h>
+#include <zmk/keymap.h>
 #include <zmk/usb.h>
 
 #include "screen.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 static lv_obj_t *global_canvas = NULL;
-static int global_draw_count = 0;
 
 static void draw_canvas(void)
 {
     if (!global_canvas) return;
-
-    global_draw_count++;
 
     // 1. Fill background White
     lv_canvas_fill_bg(global_canvas, lv_color_white(), LV_OPA_COVER);
@@ -28,24 +30,22 @@ static void draw_canvas(void)
 
     lv_layer_t layer;
     lv_canvas_init_layer(global_canvas, &layer);
-    
+
     char buf[64];
     lv_area_t area = {2, 2, 125, 30};
 
-    // V26 tag + Uptime + Battery + USB
-    snprintf(buf, sizeof(buf), "V26 #%d UP:%llds\nBAT:%d%% USB:%s", 
-             global_draw_count,
-             k_uptime_get() / 1000,
-             zmk_battery_state_of_charge(),
-             zmk_usb_is_powered() ? "Y" : "N");
-             
+    uint8_t l_idx = zmk_keymap_highest_layer_active();
+    int b_idx = zmk_ble_active_profile_index() + 1;
+    bool b_conn = zmk_ble_active_profile_is_connected();
+
+    snprintf(buf, sizeof(buf), "ZZUSE UP:%llds L:%d B:%d %s \nBAT:%d%%", k_uptime_get() / 1000, l_idx, b_idx,
+             b_conn ? "ON" : "OFF", get_natural_battery_level());
+
     label_dsc.text = buf;
     lv_draw_label(&layer, &label_dsc, &area);
 
     lv_canvas_finish_layer(global_canvas, &layer);
     lv_obj_invalidate(global_canvas);
-    
-    printk("V26 Draw #%d, uptime=%lld\n", global_draw_count, k_uptime_get());
 }
 
 static void debug_work_handler(struct k_work *work) { draw_canvas(); }
@@ -56,7 +56,8 @@ K_TIMER_DEFINE(debug_timer, debug_timer_handler, NULL);
 
 LV_DRAW_BUF_DEFINE_STATIC(phys_draw_buf, 128, 32, LV_COLOR_FORMAT_I1);
 
-int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
+int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent)
+{
     widget->obj = lv_obj_create(parent);
     lv_obj_set_size(widget->obj, 128, 32);
 
