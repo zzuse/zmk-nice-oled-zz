@@ -1,7 +1,4 @@
 #include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
-LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
-
 #include <zmk/battery.h>
 #include <zmk/display.h>
 #include <zmk/usb.h>
@@ -9,7 +6,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include "screen.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
-
 static lv_obj_t *global_phys_canvas = NULL;
 static int global_draw_count = 0;
 
@@ -19,7 +15,7 @@ static void draw_canvas(void)
 
     global_draw_count++;
 
-    // 1. Fill background White
+    // Fill background White
     lv_canvas_fill_bg(global_phys_canvas, lv_color_white(), LV_OPA_COVER);
 
     lv_draw_label_dsc_t label_dsc;
@@ -29,42 +25,38 @@ static void draw_canvas(void)
 
     lv_layer_t layer;
     lv_canvas_init_layer(global_phys_canvas, &layer);
-
+    
     char buf[64];
     lv_area_t area = {2, 2, 125, 30};
 
-    // V17 tag + Draw Count + Uptime + Battery
-    snprintf(buf, sizeof(buf), "V17 #%d UP:%llds\nBAT: %d%% USB:%s", global_draw_count, k_uptime_get() / 1000,
-             zmk_battery_state_of_charge(), zmk_usb_is_powered() ? "Y" : "N");
-
+    // V23 Tag
+    snprintf(buf, sizeof(buf), "V23 #%d UP:%llds\nBAT: %d%%", 
+             global_draw_count,
+             k_uptime_get() / 1000,
+             zmk_battery_state_of_charge());
+             
     label_dsc.text = buf;
     lv_draw_label(&layer, &label_dsc, &area);
 
     lv_canvas_finish_layer(global_phys_canvas, &layer);
     lv_obj_invalidate(global_phys_canvas);
-
-    // Serial log
-    printk("V17 Draw #%d, uptime=%lld\n", global_draw_count, k_uptime_get());
 }
 
-static void debug_work_handler(struct k_work *work) { draw_canvas(); }
+static void debug_work_handler(struct k_work *work)
+{
+    draw_canvas();
+}
 K_WORK_DEFINE(debug_work, debug_work_handler);
 
 static void debug_timer_handler(struct k_timer *timer)
 {
-    // Use SYSTEM work queue to ensure execution
     k_work_submit(&debug_work);
 }
 K_TIMER_DEFINE(debug_timer, debug_timer_handler, NULL);
 
 LV_DRAW_BUF_DEFINE_STATIC(phys_draw_buf, 128, 32, LV_COLOR_FORMAT_I1);
 
-int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent)
-{
-    LOG_DBG("This is debug message");
-    LOG_INF("Key pressed!");
-    LOG_WRN("Warning happened");
-    LOG_ERR("Something broke");
+int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     widget->obj = lv_obj_create(parent);
     lv_obj_set_size(widget->obj, 128, 32);
 
@@ -78,10 +70,12 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent)
 
     global_phys_canvas = canvas;
 
-    // Initial draw
-    draw_canvas();
+    widget->node.next = NULL;
+    sys_slist_append(&widgets, &widget->node);
 
-    // Start timer: 1s delay, 1s period
+    draw_canvas();
+    
+    // 1s period
     k_timer_start(&debug_timer, K_SECONDS(1), K_SECONDS(1));
 
     return 0;
