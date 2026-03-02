@@ -3,113 +3,86 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #include <zmk/battery.h>
-#include <zmk/ble.h>
 #include <zmk/display.h>
-#include <zmk/endpoints.h>
-#include <zmk/event_manager.h>
-#include <zmk/events/battery_state_changed.h>
-#include <zmk/events/ble_active_profile_changed.h>
-#include <zmk/events/endpoint_changed.h>
-#include <zmk/events/layer_state_changed.h>
-#include <zmk/events/usb_conn_state_changed.h>
-#include <zmk/keymap.h>
 #include <zmk/usb.h>
 
 #include "screen.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
-static lv_obj_t *logic_canvas;
-LV_DRAW_BUF_DEFINE_STATIC(logic_draw_buf, 128, 128, LV_COLOR_FORMAT_I1);
+static lv_obj_t *global_phys_canvas = NULL;
+static int global_draw_count = 0;
 
-static void draw_text(int x, int y, const char *text) {
+static void draw_canvas(void)
+{
+    if (!global_phys_canvas) return;
+
+    global_draw_count++;
+
+    // 1. Fill background White
+    lv_canvas_fill_bg(global_phys_canvas, lv_color_white(), LV_OPA_COVER);
+
     lv_draw_label_dsc_t label_dsc;
     lv_draw_label_dsc_init(&label_dsc);
-    label_dsc.color = LVGL_FOREGROUND;
+    label_dsc.color = lv_color_black();
     label_dsc.font = &lv_font_unscii_8;
-    label_dsc.align = LV_TEXT_ALIGN_LEFT;
-    
+
     lv_layer_t layer;
-    lv_canvas_init_layer(logic_canvas, &layer);
-    // Logical drawing area is 32px wide, canvas is 128px high
-    lv_area_t coords = {x, y, 31, (y + 20 > 127) ? 127 : y + 20};
-    label_dsc.text = text;
-    lv_draw_label(&layer, &label_dsc, &coords);
-    lv_canvas_finish_layer(logic_canvas, &layer);
+    lv_canvas_init_layer(global_phys_canvas, &layer);
+
+    char buf[64];
+    lv_area_t area = {2, 2, 125, 30};
+
+    // V17 tag + Draw Count + Uptime + Battery
+    snprintf(buf, sizeof(buf), "V17 #%d UP:%llds\nBAT: %d%% USB:%s", global_draw_count, k_uptime_get() / 1000,
+             zmk_battery_state_of_charge(), zmk_usb_is_powered() ? "Y" : "N");
+
+    label_dsc.text = buf;
+    lv_draw_label(&layer, &label_dsc, &area);
+
+    lv_canvas_finish_layer(global_phys_canvas, &layer);
+    lv_obj_invalidate(global_phys_canvas);
+
+    // Serial log
+    printk("V17 Draw #%d, uptime=%lld\n", global_draw_count, k_uptime_get());
 }
 
-static void draw_canvas(lv_obj_t *widget_obj, const struct status_state *state) {
-    if (!logic_canvas) return;
-    lv_obj_t *phys_canvas = lv_obj_get_child(widget_obj, 0);
+static void debug_work_handler(struct k_work *work) { draw_canvas(); }
+K_WORK_DEFINE(debug_work, debug_work_handler);
 
-    // 1. Clear logic canvas
-    lv_canvas_fill_bg(logic_canvas, LVGL_BACKGROUND, LV_OPA_COVER);
-    
-    // 2. Draw Battery
-    char bat_buf[16];
-    snprintf(bat_buf, sizeof(bat_buf), "%d%%", state->battery);
-    draw_text(2, 5, bat_buf);
-    draw_text(2, 15, bat_buf);
-    draw_text(2, 25, bat_buf);
-    draw_text(2, 35, bat_buf);
-    draw_text(2, 45, bat_buf);
-    draw_text(2, 55, bat_buf);
-    draw_text(2, 65, bat_buf);
-    draw_text(2, 75, bat_buf);
-    draw_text(2, 85, bat_buf);
-    draw_text(2, 95, bat_buf);
-    draw_text(2, 105, bat_buf);
-    draw_text(2, 115, bat_buf);
-
-    rotate_canvas(phys_canvas, logic_canvas);
+static void debug_timer_handler(struct k_timer *timer)
+{
+    // Use SYSTEM work queue to ensure execution
+    k_work_submit(&debug_work);
 }
-
-static void set_battery_status(struct zmk_widget_screen *widget, struct battery_status_state state) {
-    widget->state.battery = state.level;
-    widget->state.charging = state.usb_present;
-    draw_canvas(widget->obj, &widget->state);
-}
-
-static void battery_status_update_cb(struct battery_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_battery_status(widget, state); }
-}
-static struct battery_status_state battery_status_get_state(const zmk_event_t *eh) { 
-    const struct zmk_battery_state_changed *ev = as_zmk_battery_state_changed(eh);
-    return (struct battery_status_state){.level = (ev != NULL) ? ev->state_of_charge : zmk_battery_state_of_charge()};
-}
-ZMK_DISPLAY_WIDGET_LISTENER(widget_battery_status, struct battery_status_state, battery_status_update_cb, battery_status_get_state);
-ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
-ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
+K_TIMER_DEFINE(debug_timer, debug_timer_handler, NULL);
 
 LV_DRAW_BUF_DEFINE_STATIC(phys_draw_buf, 128, 32, LV_COLOR_FORMAT_I1);
 
-int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
+int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent)
+{
+    LOG_DBG("This is debug message");
+    LOG_INF("Key pressed!");
+    LOG_WRN("Warning happened");
+    LOG_ERR("Something broke");
     widget->obj = lv_obj_create(parent);
     lv_obj_set_size(widget->obj, 128, 32);
-    // lv_obj_set_style_bg_color(widget->obj, lv_color_white(), 0);
 
-    lv_obj_t *phys_canvas = lv_canvas_create(widget->obj);
-    lv_obj_align(phys_canvas, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_t *canvas = lv_canvas_create(widget->obj);
+    lv_obj_align(canvas, LV_ALIGN_TOP_LEFT, 0, 0);
     LV_DRAW_BUF_INIT_STATIC(phys_draw_buf);
-    lv_canvas_set_draw_buf(phys_canvas, &phys_draw_buf);
-    
-    lv_color32_t c_white = {.red=255, .green=255, .blue=255, .alpha=255};
-    lv_color32_t c_black = {.red=0, .green=0, .blue=0, .alpha=255};
-    lv_canvas_set_palette(phys_canvas, 0, c_white);
-    lv_canvas_set_palette(phys_canvas, 1, c_black);
+    lv_canvas_set_draw_buf(canvas, &phys_draw_buf);
 
-    if (!logic_canvas) {
-        LV_DRAW_BUF_INIT_STATIC(logic_draw_buf);
-        logic_canvas = lv_canvas_create(NULL);
-        lv_canvas_set_draw_buf(logic_canvas, &logic_draw_buf);
-        lv_canvas_set_palette(logic_canvas, 0, c_white);
-        lv_canvas_set_palette(logic_canvas, 1, c_black);
-    }
+    lv_canvas_set_palette(canvas, 0, lv_color32_make(0, 0, 0, 255));
+    lv_canvas_set_palette(canvas, 1, lv_color32_make(255, 255, 255, 255));
 
-    sys_slist_append(&widgets, &widget->node);
+    global_phys_canvas = canvas;
 
-    widget_battery_status_init();
+    // Initial draw
+    draw_canvas();
+
+    // Start timer: 1s delay, 1s period
+    k_timer_start(&debug_timer, K_SECONDS(1), K_SECONDS(1));
 
     return 0;
 }

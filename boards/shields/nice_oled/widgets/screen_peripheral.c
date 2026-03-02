@@ -38,7 +38,7 @@ static void draw_full_canvas(lv_obj_t *widget_obj) {
     lv_canvas_fill_bg(logic_canvas_peri, LVGL_BACKGROUND, LV_OPA_COVER);
     
     char bat_buf[16];
-    snprintf(bat_buf, sizeof(bat_buf), "%d%%", zmk_battery_state_of_charge());
+    snprintf(bat_buf, sizeof(bat_buf), "PERI: %d%%", zmk_battery_state_of_charge());
     draw_text(2, 5, bat_buf);
     
     draw_text(2, 55, zmk_split_bt_peripheral_is_connected() ? "CONN" : "DISC");
