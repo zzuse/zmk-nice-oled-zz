@@ -19,13 +19,14 @@ static void draw_text(lv_obj_t *target_canvas, int x, int y, const char *text)
 {
     lv_draw_label_dsc_t label_dsc;
     lv_draw_label_dsc_init(&label_dsc);
-    label_dsc.color = lv_color_black(); // Index 0
+    label_dsc.color = lv_color_make(0, 0, 0); // Black text (Index 0)
     label_dsc.font = &lv_font_unscii_8;
 
     lv_layer_t layer;
     lv_canvas_init_layer(target_canvas, &layer);
-    
-    lv_area_t area = {x, y, 31, 127};
+
+    // Width is exactly 32px. Limit height to prevent wrapping.
+    lv_area_t area = {x, y, 31, y + 10};
     label_dsc.text = text;
     lv_draw_label(&layer, &label_dsc, &area);
 
@@ -39,29 +40,32 @@ static void draw_canvas(void)
     global_draw_count++;
 
     // 1. Fill logic canvas White (Index 1)
-    lv_canvas_fill_bg(global_logic_canvas, lv_color_white(), LV_OPA_COVER);
+    lv_canvas_fill_bg(global_logic_canvas, lv_color_make(0, 0, 1), LV_OPA_COVER);
 
-    char buf[32];
+    char buf[16];
 
-    // Top: Layer and Heartbeat
+    // Top: Layer and Heartbeat (Max 4 chars: L0 *)
     uint8_t l_idx = zmk_keymap_highest_layer_active();
-    const char *hb = (global_draw_count % 2) ? "<3" : "  ";
-    snprintf(buf, sizeof(buf), "LY:%d %s", l_idx, hb);
-    draw_text(global_logic_canvas, 2, 5, buf);
+    snprintf(buf, sizeof(buf), "L%d %s", l_idx, (global_draw_count % 2) ? "*" : " ");
+    draw_text(global_logic_canvas, 0, 0, buf);
 
-    // Middle: Connection Status
+    // Bluetooth Section
     int b_idx = zmk_ble_active_profile_index() + 1;
     bool b_conn = zmk_ble_active_profile_is_connected();
-    snprintf(buf, sizeof(buf), "BT:%d %s", b_idx, b_conn ? "ON" : "OFF");
-    draw_text(global_logic_canvas, 2, 45, buf);
-    
-    // Bottom: Battery 
-    snprintf(buf, sizeof(buf), "BAT:%d%%", get_natural_battery_level());
-    draw_text(global_logic_canvas, 2, 85, buf);
-    
-    // Uptime
-    snprintf(buf, sizeof(buf), "UP:%llds", k_uptime_get() / 1000);
-    draw_text(global_logic_canvas, 2, 115, buf);
+    snprintf(buf, sizeof(buf), "BT%d", b_idx);
+    draw_text(global_logic_canvas, 0, 20, buf);
+    draw_text(global_logic_canvas, 0, 30, b_conn ? "ON" : "OFF");
+
+    // Battery Section
+    draw_text(global_logic_canvas, 0, 50, "BAT");
+    snprintf(buf, sizeof(buf), "%d%%", get_natural_battery_level());
+    draw_text(global_logic_canvas, 0, 60, buf);
+
+    // Uptime Section
+    draw_text(global_logic_canvas, 0, 80, "UP:");
+    long long uptime_s = k_uptime_get() / 1000;
+    snprintf(buf, sizeof(buf), "%lld", uptime_s);
+    draw_text(global_logic_canvas, 0, 90, buf);
 
     // 2. Rotate to physical
     rotate_canvas(global_phys_canvas, global_logic_canvas);
@@ -76,7 +80,8 @@ K_TIMER_DEFINE(debug_timer, debug_timer_handler, NULL);
 LV_DRAW_BUF_DEFINE_STATIC(logic_draw_buf, 128, 128, LV_COLOR_FORMAT_I1);
 LV_DRAW_BUF_DEFINE_STATIC(phys_draw_buf, 128, 32, LV_COLOR_FORMAT_I1);
 
-int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
+int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent)
+{
     widget->obj = lv_obj_create(parent);
     lv_obj_set_size(widget->obj, 128, 32);
 
