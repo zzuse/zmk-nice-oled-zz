@@ -5,6 +5,12 @@
 ## Project Overview
 The nice!oled shield is a ZMK firmware module that provides a customizable OLED status screen for mechanical keyboards. It displays system information such as battery level, active layer, modifiers, output profile, WPM, and keycodes. The module is designed to be easily integrated into ZMK-based keyboard firmware.
 
+## Dependence
+   The main(development) branch dependent on ZMK 0.4 (the version currently in development), the west build command reflects significant changes in how Zephyr 4.1 handles hardware.  Underlying Libraries (The "Engine")
+   * Zephyr RTOS: Upgraded from 3.5 to 4.1. This changed how the keyboard handles power, Bluetooth, and USB.
+   * LVGL (Display): Upgraded from 8.3 to 9.x. This is why we had to rewrite your OLED code; the way the screen "draws" pixels was completely replaced with a more modern "layer-based" system.
+   Using tag version v0.3 For ZMK 0.3 stable build.
+
 ## Features
 - **Battery Status**: Shows current battery level and charging status
 - **Layer Display**: Indicates the currently active keyboard layer
@@ -68,5 +74,4 @@ Displays active output profile (BLE/USB)
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 ## Contributors
-- Marcos Chow Castro (Original Author)
 - zzuse (Maintainer) Modify to suit my own needs
