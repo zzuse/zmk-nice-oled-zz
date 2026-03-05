@@ -1,277 +1,112 @@
 #include <zephyr/kernel.h>
-
-#include <zephyr/logging/log.h>
-LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
-
 #include <zmk/battery.h>
 #include <zmk/ble.h>
 #include <zmk/display.h>
 #include <zmk/endpoints.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/battery_state_changed.h>
-#include <zmk/events/ble_active_profile_changed.h>
-#include <zmk/events/endpoint_changed.h>
-#include <zmk/events/layer_state_changed.h>
-#include <zmk/events/usb_conn_state_changed.h>
-#include <zmk/events/wpm_state_changed.h>
-#include <zmk/events/keycode_state_changed.h>
 #include <zmk/keymap.h>
 #include <zmk/usb.h>
-#include <zmk/wpm.h>
 
-#include "battery.h"
-#include "layer.h"
-#include "output.h"
-#include "profile.h"
 #include "screen.h"
-#include "keycode.h"
-#include "wpm.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
+static lv_obj_t *global_logic_canvas = NULL;
+static lv_obj_t *global_phys_canvas = NULL;
+static int global_draw_count = 0;
 
-/**
- * luna
- **/
+static void draw_text(lv_obj_t *target_canvas, int x, int y, const char *text)
+{
+    lv_draw_label_dsc_t label_dsc;
+    lv_draw_label_dsc_init(&label_dsc);
+    label_dsc.color = lv_color_make(0, 0, 0); // Black text (Index 0)
+    label_dsc.font = &lv_font_unscii_8;
 
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_WPM)
-#include "luna.h"
-static struct zmk_widget_luna luna_widget;
-#endif
+    lv_layer_t layer;
+    lv_canvas_init_layer(target_canvas, &layer);
 
-/**
- * modifiers
- **/
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_MODIFIERS_INDICATORS)
-#include "modifiers.h"                               // Incluir el archivo de cabecera de modifiers
-static struct zmk_widget_modifiers modifiers_widget; // Declarar el widget de modifiers
-#endif
+    // Width is exactly 32px. Limit height to prevent wrapping.
+    lv_area_t area = {x, y, 31, y + 10};
+    label_dsc.text = text;
+    lv_draw_label(&layer, &label_dsc, &area);
 
-/**
- * hid indicators
- **/
-
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_HID_INDICATORS)
-#include "hid_indicators.h"
-static struct zmk_widget_hid_indicators hid_indicators_widget;
-#endif
-
-/**
- * Draw canvas
- **/
-
-static void draw_canvas(lv_obj_t *widget, lv_color_t cbuf[], const struct status_state *state) {
-    lv_obj_t *canvas = lv_obj_get_child(widget, 0);
-
-    // Draw widgets
-    draw_background(canvas);
-    draw_layer_status(canvas, state);
-    // draw_wpm_status(canvas, state);
-    // draw_profile_status(canvas, state);
-    draw_output_status(canvas, state);
-    draw_battery_status(canvas, state);
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    draw_keycode_status(canvas, state);
-#endif
-    // Rotate for horizontal display
-    rotate_canvas(canvas, cbuf);
+    lv_canvas_finish_layer(target_canvas, &layer);
 }
 
-/**
- * Battery status
- **/
+static void draw_canvas(void)
+{
+    if (!global_logic_canvas || !global_phys_canvas) return;
 
-static void set_battery_status(struct zmk_widget_screen *widget,
-                               struct battery_status_state state) {
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    widget->state.charging = state.usb_present;
-#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+    global_draw_count++;
 
-    widget->state.battery = state.level;
+    // 1. Fill logic canvas White (Index 1)
+    lv_canvas_fill_bg(global_logic_canvas, lv_color_make(0, 0, 1), LV_OPA_COVER);
 
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
+    char buf[16];
+
+    // Top: Layer and Heartbeat (Max 4 chars: L0 *)
+    uint8_t l_idx = zmk_keymap_highest_layer_active();
+    snprintf(buf, sizeof(buf), "L%d %s", l_idx, (global_draw_count % 2) ? "*" : " ");
+    draw_text(global_logic_canvas, 0, 0, buf);
+
+    // Bluetooth Section
+    int b_idx = zmk_ble_active_profile_index() + 1;
+    bool b_conn = zmk_ble_active_profile_is_connected();
+    snprintf(buf, sizeof(buf), "BT%d", b_idx);
+    draw_text(global_logic_canvas, 0, 20, buf);
+    draw_text(global_logic_canvas, 0, 30, b_conn ? "ON" : "OFF");
+
+    // Battery Section
+    draw_text(global_logic_canvas, 0, 50, "BAT");
+    snprintf(buf, sizeof(buf), "%d%%", get_natural_battery_level());
+    draw_text(global_logic_canvas, 0, 60, buf);
+
+    // Uptime Section
+    draw_text(global_logic_canvas, 0, 80, "UP:");
+    long long uptime_s = k_uptime_get() / 1000;
+    snprintf(buf, sizeof(buf), "%lld", uptime_s);
+    draw_text(global_logic_canvas, 0, 90, buf);
+
+    // 2. Rotate to physical
+    rotate_canvas(global_phys_canvas, global_logic_canvas);
 }
 
-static void battery_status_update_cb(struct battery_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_battery_status(widget, state); }
-}
+static void debug_work_handler(struct k_work *work) { draw_canvas(); }
+K_WORK_DEFINE(debug_work, debug_work_handler);
 
-static struct battery_status_state battery_status_get_state(const zmk_event_t *eh) {
-    const struct zmk_battery_state_changed *ev = as_zmk_battery_state_changed(eh);
+static void debug_timer_handler(struct k_timer *timer) { k_work_submit(&debug_work); }
+K_TIMER_DEFINE(debug_timer, debug_timer_handler, NULL);
 
-    return (struct battery_status_state){
-        .level = (ev != NULL) ? ev->state_of_charge : zmk_battery_state_of_charge(),
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-        .usb_present = zmk_usb_is_powered(),
-#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
-    };
-}
+LV_DRAW_BUF_DEFINE_STATIC(logic_draw_buf, 128, 128, LV_COLOR_FORMAT_I1);
+LV_DRAW_BUF_DEFINE_STATIC(phys_draw_buf, 128, 32, LV_COLOR_FORMAT_I1);
 
-ZMK_DISPLAY_WIDGET_LISTENER(widget_battery_status, struct battery_status_state,
-                            battery_status_update_cb, battery_status_get_state);
-
-ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
-#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
-
-/**
- * Layer status
- **/
-
-static void set_layer_status(struct zmk_widget_screen *widget, struct layer_status_state state) {
-    widget->state.layer_index = state.index;
-    widget->state.layer_label = state.label;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
-
-static void layer_status_update_cb(struct layer_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_layer_status(widget, state); }
-}
-
-static struct layer_status_state layer_status_get_state(const zmk_event_t *eh) {
-    uint8_t index = zmk_keymap_highest_layer_active();
-    return (struct layer_status_state){.index = index, .label = zmk_keymap_layer_name(index)};
-}
-
-ZMK_DISPLAY_WIDGET_LISTENER(widget_layer_status, struct layer_status_state, layer_status_update_cb,
-                            layer_status_get_state)
-
-ZMK_SUBSCRIPTION(widget_layer_status, zmk_layer_state_changed);
-
-/**
- * Output status
- **/
-
-static void set_output_status(struct zmk_widget_screen *widget,
-                              const struct output_status_state *state) {
-    widget->state.selected_endpoint = state->selected_endpoint;
-    widget->state.active_profile_index = state->active_profile_index;
-    widget->state.active_profile_connected = state->active_profile_connected;
-    widget->state.active_profile_bonded = state->active_profile_bonded;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
-
-static void output_status_update_cb(struct output_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_output_status(widget, &state); }
-}
-
-static struct output_status_state output_status_get_state(const zmk_event_t *_eh) {
-    return (struct output_status_state){
-        .selected_endpoint = zmk_endpoints_selected(),
-        .active_profile_index = zmk_ble_active_profile_index(),
-        .active_profile_connected = zmk_ble_active_profile_is_connected(),
-        .active_profile_bonded = !zmk_ble_active_profile_is_open(),
-    };
-}
-
-ZMK_DISPLAY_WIDGET_LISTENER(widget_output_status, struct output_status_state,
-                            output_status_update_cb, output_status_get_state)
-ZMK_SUBSCRIPTION(widget_output_status, zmk_endpoint_changed);
-
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-ZMK_SUBSCRIPTION(widget_output_status, zmk_usb_conn_state_changed);
-#endif
-#if defined(CONFIG_ZMK_BLE)
-ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_active_profile_changed);
-#endif
-
-/**
- * WPM status
- **/
-
-static void set_wpm_status(struct zmk_widget_screen *widget, struct wpm_status_state state) {
-    for (int i = 0; i < 9; i++) {
-        widget->state.wpm[i] = widget->state.wpm[i + 1];
-    }
-    widget->state.wpm[9] = state.wpm;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
-
-static void wpm_status_update_cb(struct wpm_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_wpm_status(widget, state); }
-}
-
-struct wpm_status_state wpm_status_get_state(const zmk_event_t *eh) {
-    return (struct wpm_status_state){.wpm = zmk_wpm_get_state()};
-};
-
-ZMK_DISPLAY_WIDGET_LISTENER(widget_wpm_status, struct wpm_status_state, wpm_status_update_cb,
-                            wpm_status_get_state)
-ZMK_SUBSCRIPTION(widget_wpm_status, zmk_wpm_state_changed);
-
-/**
- * KeyCode
- * 
- **/
-
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-static void set_keycode_status(struct zmk_widget_screen *widget,
-                               struct keycode_status_state state) {
-    widget->state.keycode = state.keycode;
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
-
-static void keycode_status_update_cb(struct keycode_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_keycode_status(widget, state); }
-}
-
-static uint32_t last_keycode = 0;
-
-struct keycode_status_state keycode_status_get_state(const zmk_event_t *eh) {
-    const struct zmk_keycode_state_changed *ev = as_zmk_keycode_state_changed(eh);
-    if (ev->state) { // Only on key press, not release
-        last_keycode = ev->keycode;
-        // Optionally trigger a redraw here
-    }
-    return (struct keycode_status_state){.keycode = last_keycode };
-}
-// // Register the listener
-ZMK_DISPLAY_WIDGET_LISTENER(widget_keycode_status, struct keycode_status_state,
-                            keycode_status_update_cb, keycode_status_get_state);
-ZMK_SUBSCRIPTION(widget_keycode_status, zmk_keycode_state_changed);
-#endif
-
-/**
- * Initialization
- **/
-
-int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
+int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent)
+{
     widget->obj = lv_obj_create(parent);
-    lv_obj_set_size(widget->obj, CANVAS_HEIGHT, CANVAS_WIDTH);
+    lv_obj_set_size(widget->obj, 128, 32);
 
-    lv_obj_t *canvas = lv_canvas_create(widget->obj);
-    lv_obj_align(canvas, LV_ALIGN_TOP_LEFT, 0, 0);
-    lv_canvas_set_buffer(canvas, widget->cbuf, CANVAS_HEIGHT, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
+    lv_obj_t *phys_canvas = lv_canvas_create(widget->obj);
+    lv_obj_align(phys_canvas, LV_ALIGN_TOP_LEFT, 0, 0);
+    LV_DRAW_BUF_INIT_STATIC(phys_draw_buf);
+    lv_canvas_set_draw_buf(phys_canvas, &phys_draw_buf);
 
+    lv_canvas_set_palette(phys_canvas, 0, lv_color32_make(0, 0, 0, 255));
+    lv_canvas_set_palette(phys_canvas, 1, lv_color32_make(255, 255, 255, 255));
+
+    lv_obj_t *logic_canvas = lv_canvas_create(NULL);
+    LV_DRAW_BUF_INIT_STATIC(logic_draw_buf);
+    lv_canvas_set_draw_buf(logic_canvas, &logic_draw_buf);
+    lv_canvas_set_palette(logic_canvas, 0, lv_color32_make(0, 0, 0, 255));
+    lv_canvas_set_palette(logic_canvas, 1, lv_color32_make(255, 255, 255, 255));
+
+    global_phys_canvas = phys_canvas;
+    global_logic_canvas = logic_canvas;
+
+    widget->node.next = NULL;
     sys_slist_append(&widgets, &widget->node);
-    widget_battery_status_init();
-    widget_layer_status_init();
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    widget_keycode_status_init();
-#endif
-    widget_output_status_init();
-    // widget_wpm_status_init();
 
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_WPM)
-    zmk_widget_luna_init(&luna_widget, canvas);
-    lv_obj_align(zmk_widget_luna_obj(&luna_widget), LV_ALIGN_TOP_LEFT, 36, 0);
-#endif
-
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_HID_INDICATORS)
-    zmk_widget_hid_indicators_init(&hid_indicators_widget, canvas);
-#endif
-
-#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_MODIFIERS_INDICATORS)
-    zmk_widget_modifiers_init(&modifiers_widget, canvas); // Inicializar el widget de modifiers
-#endif
+    draw_canvas();
+    k_timer_start(&debug_timer, K_SECONDS(1), K_SECONDS(1));
 
     return 0;
 }

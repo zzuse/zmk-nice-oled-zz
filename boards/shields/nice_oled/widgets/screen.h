@@ -6,10 +6,14 @@
 #include <lvgl.h>
 #include <zephyr/kernel.h>
 
+struct battery_status_state {
+    uint8_t level;
+    bool usb_present;
+};
+
 struct zmk_widget_screen {
   sys_snode_t node;
   lv_obj_t *obj;
-  lv_color_t cbuf[CANVAS_HEIGHT * CANVAS_HEIGHT];
   struct status_state state;
 };
 

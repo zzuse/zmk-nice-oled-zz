@@ -1,52 +1,70 @@
 #include "util.h"
-#include <ctype.h>
 #include <zephyr/kernel.h>
 
-void to_uppercase(char *str) {
-  for (int i = 0; str[i] != '\0'; i++) {
-    str[i] = toupper(str[i]);
-  }
-}
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/devicetree.h>
+#include <zmk/battery.h>
 
-void rotate_canvas(lv_obj_t *canvas, lv_color_t cbuf[]) {
-  static lv_color_t cbuf_tmp[CANVAS_HEIGHT * CANVAS_HEIGHT];
-  memcpy(cbuf_tmp, cbuf, sizeof(cbuf_tmp));
+void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas) {
+    lv_draw_buf_t *src_buf = lv_canvas_get_draw_buf(logic_canvas);
+    lv_draw_buf_t *dst_buf = lv_canvas_get_draw_buf(phys_canvas);
+    
+    // In LVGL 9, the palette is at the START of the data buffer for indexed formats.
+    // I1 has 2 palette entries of lv_color32_t (4 bytes each) = 8 bytes.
+    uint8_t *src_pixels = ((uint8_t *)src_buf->data) + 8;
+    uint8_t *dst_pixels = ((uint8_t *)dst_buf->data) + 8;
+    
+    uint32_t src_stride = src_buf->header.stride;
+    uint32_t dst_stride = dst_buf->header.stride;
 
-  lv_img_dsc_t img;
-  img.data = (void *)cbuf_tmp;
-  img.header.cf = LV_IMG_CF_TRUE_COLOR;
-  img.header.w = CANVAS_HEIGHT;
-  img.header.h = CANVAS_HEIGHT;
+    // Clear destination to Index 1 (White background)
+    // Index 1 is represented by setting bits to 1.
+    for (int y = 0; y < 32; y++) {
+        memset(dst_pixels + (y * dst_stride), 0xFF, dst_stride);
+    }
 
-  lv_canvas_fill_bg(canvas, LVGL_BACKGROUND, LV_OPA_COVER);
-  lv_canvas_transform(canvas, &img, 900, LV_IMG_ZOOM_NONE, -1, 0,
-                      CANVAS_HEIGHT / 2, CANVAS_HEIGHT / 2, false);
+    for (int y = 0; y < 128; y++) {
+        for (int x = 0; x < 32; x++) {
+            int src_byte = (y * src_stride) + (x / 8);
+            int src_bit = 7 - (x % 8);
+            
+            // Check if source bit is 0 (Index 0 / Black)
+            if (!(src_pixels[src_byte] & (1 << src_bit))) {
+                // Pixel is Black. Rotate 90 deg clockwise.
+                int px = 127 - y;
+                int py = x;
+                
+                int dst_byte = (py * dst_stride) + (px / 8);
+                int dst_bit = 7 - (px % 8);
+                
+                // Set the destination bit to 0 (Index 0 / Black)
+                dst_pixels[dst_byte] &= ~(1 << dst_bit);
+            }
+        }
+    }
+    lv_obj_invalidate(phys_canvas);
 }
 
 void draw_background(lv_obj_t *canvas) {
-  lv_draw_rect_dsc_t rect_black_dsc;
-  init_rect_dsc(&rect_black_dsc, LVGL_BACKGROUND);
-
-  lv_canvas_draw_rect(canvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT,
-                      &rect_black_dsc);
+  lv_canvas_fill_bg(canvas, LVGL_BACKGROUND, LV_OPA_COVER);
 }
 
-void init_label_dsc(lv_draw_label_dsc_t *label_dsc, lv_color_t color,
-                    const lv_font_t *font, lv_text_align_t align) {
-  lv_draw_label_dsc_init(label_dsc);
-  label_dsc->color = color;
-  label_dsc->font = font;
-  label_dsc->align = align;
-}
+uint8_t get_natural_battery_level(void) {
+    const struct device *batt_dev = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zmk_battery));
+    if (batt_dev == NULL || !device_is_ready(batt_dev)) return zmk_battery_state_of_charge();
 
-void init_rect_dsc(lv_draw_rect_dsc_t *rect_dsc, lv_color_t bg_color) {
-  lv_draw_rect_dsc_init(rect_dsc);
-  rect_dsc->bg_color = bg_color;
-}
+    struct sensor_value voltage;
+    if (sensor_sample_fetch_chan(batt_dev, SENSOR_CHAN_GAUGE_VOLTAGE) != 0) {
+        return zmk_battery_state_of_charge();
+    }
+    sensor_channel_get(batt_dev, SENSOR_CHAN_GAUGE_VOLTAGE, &voltage);
+    
+    int16_t mv = voltage.val1 * 1000 + (voltage.val2 / 1000);
 
-void init_line_dsc(lv_draw_line_dsc_t *line_dsc, lv_color_t color,
-                   uint8_t width) {
-  lv_draw_line_dsc_init(line_dsc);
-  line_dsc->color = color;
-  line_dsc->width = width;
+    if (mv >= 4150) return 100;
+    if (mv >= 4000) return 90 + (mv - 4000) * 10 / 150;
+    if (mv >= 3700) return 50 + (mv - 3700) * 40 / 300;
+    if (mv >= 3500) return 10 + (mv - 3500) * 40 / 200;
+    if (mv >= 3400) return (mv - 3400) * 10 / 100;
+    return 0;
 }
