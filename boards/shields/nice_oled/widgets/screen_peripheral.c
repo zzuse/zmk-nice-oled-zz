@@ -8,6 +8,7 @@
 #include <zmk/usb.h>
 
 #include "screen_peripheral.h"
+#include "battery.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 static lv_obj_t *global_logic_canvas = NULL;
@@ -54,8 +55,12 @@ static void draw_canvas(void)
 
     // Battery Section
     draw_text(global_logic_canvas, 0, 50, "BAT");
-    snprintf(buf, sizeof(buf), "%d%%", get_natural_battery_level());
-    draw_text(global_logic_canvas, 0, 60, buf);
+
+    struct status_state temp_state = {
+        .battery = get_natural_battery_level(),
+        .charging = false, // You could pull from real status if available
+    };
+    draw_battery_status(global_logic_canvas, &temp_state);
 
     // Uptime Section
     draw_text(global_logic_canvas, 0, 80, "UP:");
@@ -102,7 +107,7 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent)
     sys_slist_append(&widgets, &widget->node);
 
     draw_canvas();
-    k_timer_start(&debug_timer, K_SECONDS(1), K_SECONDS(1));
+    k_timer_start(&debug_timer, K_MSEC(60), K_MSEC(60));
 
     return 0;
 }

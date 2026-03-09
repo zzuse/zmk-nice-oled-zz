@@ -13,6 +13,7 @@
 struct status_state {
     uint8_t battery;
     bool charging;
+    uint32_t uptime_seconds;
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     struct zmk_endpoint_instance selected_endpoint;
     int active_profile_index;
@@ -20,11 +21,14 @@ struct status_state {
     bool active_profile_bonded;
     uint8_t layer_index;
     const char *layer_label;
+    uint8_t mod_state;
+    uint32_t keycode;
 #else
     bool connected;
 #endif
 };
 
+void draw_text(lv_obj_t *target_canvas, int x, int y, const char *text);
 void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas);
 void draw_background(lv_obj_t *canvas);
 uint8_t get_natural_battery_level(void);

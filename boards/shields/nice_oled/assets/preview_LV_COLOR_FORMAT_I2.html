@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Bolt Image Preview</title>
+  <style>
+    body {
+      background: #111;
+      color: #eee;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    canvas {
+      image-rendering: pixelated;
+      border: 1px solid #444;
+      background: #000;
+      scale: 10;
+      margin-bottom: 2rem;
+    }
+
+    .info {
+      font-family: monospace;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Bolt</h1>
+  <canvas id="preview" width="11" height="18"></canvas>
+  <div class="info"></div>
+  <script>
+    // Width: 11, Height: 18 (Format: LV_COLOR_FORMAT_I2)
+    const palette = [
+      [0, 0, 0, 0],
+      [255, 255, 255, 255],
+      [0, 0, 0, 255],
+      [0, 0, 0, 0]
+    ];
+
+    const data = [
+      0x00, 0x14, 0x00, 0x00, 0x64, 0x00, 0x00, 0x64, 0x00, 0x01, 0xa4, 0x00, 0x01, 0xa4,
+      0x00, 0x06, 0xa4, 0x00, 0x06, 0xa4, 0x00, 0x1a, 0xa5, 0x54, 0x1a, 0xaa, 0xa4, 0x6a,
+      0xaa, 0x90, 0x55, 0x6a, 0x90, 0x00, 0x6a, 0x40, 0x00, 0x6a, 0x40, 0x00, 0x69, 0x00,
+      0x00, 0x69, 0x00, 0x00, 0x64, 0x00, 0x00, 0x64, 0x00, 0x00, 0x50, 0x00,
+    ];
+
+    const canvas = document.getElementById('preview');
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(11, 18);
+
+    let byteIdx = 0;
+    for (let y = 0; y < 18; y++) {
+      let bitsLeft = 0;
+      let currentByte = 0;
+      for (let x = 0; x < 11; x++) {
+        if (bitsLeft === 0) {
+          currentByte = data[byteIdx++];
+          bitsLeft = 8;
+        }
+        const pIdx = (currentByte >> (bitsLeft - 2)) & 0x03;
+        const [r, g, b, a] = palette[pIdx];
+        const offset = (y * 11 + x) * 4;
+        imgData.data[offset] = r;
+        imgData.data[offset + 1] = g;
+        imgData.data[offset + 2] = b;
+        imgData.data[offset + 3] = a;
+        bitsLeft -= 2;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  </script>
+</body>
+
+</html>

@@ -2,12 +2,15 @@
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
+#include "assets/custom_fonts.h"
+#include "assets/pixel_operator_mono_8.c"
 
 #if IS_ENABLED(CONFIG_ZMK_DISPLAY_STATUS_SCREEN_CUSTOM)
 static struct zmk_widget_screen screen_widget;
 #endif
 
-lv_obj_t *zmk_display_status_screen() {
+lv_obj_t *zmk_display_status_screen()
+{
     lv_obj_t *screen;
     screen = lv_obj_create(NULL);
 

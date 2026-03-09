@@ -1,0 +1,1 @@
+To create image assets, use https://lvgl.io/tools/imageconverter
