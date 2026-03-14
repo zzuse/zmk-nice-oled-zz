@@ -3,10 +3,13 @@
 #include <zephyr/kernel.h>
 #include <zmk/hid.h>
 
+#include <dt-bindings/zmk/hid_usage_pages.h>
+#include <dt-bindings/zmk/modifiers.h>
+
 static const char* keycode_to_string(uint32_t keycode, uint16_t usage_page)
 {
-    // Handle standard keyboard keys (HID Usage Page 0x07)
-    if (usage_page == HID_USAGE_KEY) {
+    // Both 0x07 and 0x00 are common for keyboard usage page in ZMK events
+    if (usage_page == HID_USAGE_KEY || usage_page == 0x00) {
         switch (keycode) {
             case HID_USAGE_KEY_KEYBOARD_A:
                 return "A";
@@ -90,8 +93,6 @@ static const char* keycode_to_string(uint32_t keycode, uint16_t usage_page)
                 return "ESC";
             case HID_USAGE_KEY_KEYBOARD_TAB:
                 return "TAB";
-            case HID_USAGE_KEY_KEYBOARD_DELETE_BACKSPACE:
-                return "DEL";
             case HID_USAGE_KEY_KEYBOARD_MINUS_AND_UNDERSCORE:
                 return "_";
             case HID_USAGE_KEY_KEYBOARD_EQUAL_AND_PLUS:
@@ -118,24 +119,10 @@ static const char* keycode_to_string(uint32_t keycode, uint16_t usage_page)
                 return "/";
             case HID_USAGE_KEY_KEYBOARD_CAPS_LOCK:
                 return "CAPS";
-
-            case HID_USAGE_KEY_KEYBOARD_LEFTSHIFT:
-                return "LSHFT";
-            case HID_USAGE_KEY_KEYBOARD_RIGHTSHIFT:
-                return "RSHFT";
-            case HID_USAGE_KEY_KEYBOARD_LEFTCONTROL:
-                return "LCTRL";
-            case HID_USAGE_KEY_KEYBOARD_RIGHTCONTROL:
-                return "RCTRL";
-            case HID_USAGE_KEY_KEYBOARD_LEFTALT:
-                return "LALT";
-            case HID_USAGE_KEY_KEYBOARD_RIGHTALT:
-                return "RALT";
-            case HID_USAGE_KEY_KEYBOARD_LEFT_GUI:
-                return "LGUI";
-            case HID_USAGE_KEY_KEYBOARD_RIGHT_GUI:
-                return "RGUI";
-
+            case HID_USAGE_KEY_KEYBOARD_DELETE_BACKSPACE:
+                return "BSPC";
+            case HID_USAGE_KEY_KEYBOARD_DELETE_FORWARD:
+                return "DEL";
             case HID_USAGE_KEY_KEYBOARD_UPARROW:
                 return "UP";
             case HID_USAGE_KEY_KEYBOARD_DOWNARROW:
@@ -145,12 +132,73 @@ static const char* keycode_to_string(uint32_t keycode, uint16_t usage_page)
             case HID_USAGE_KEY_KEYBOARD_RIGHTARROW:
                 return "RIGHT";
 
+            case HID_USAGE_KEY_KEYBOARD_F1:
+                return "F1";
+            case HID_USAGE_KEY_KEYBOARD_F2:
+                return "F2";
+            case HID_USAGE_KEY_KEYBOARD_F3:
+                return "F3";
+            case HID_USAGE_KEY_KEYBOARD_F4:
+                return "F4";
+            case HID_USAGE_KEY_KEYBOARD_F5:
+                return "F5";
+            case HID_USAGE_KEY_KEYBOARD_F6:
+                return "F6";
+            case HID_USAGE_KEY_KEYBOARD_F7:
+                return "F7";
+            case HID_USAGE_KEY_KEYBOARD_F8:
+                return "F8";
+            case HID_USAGE_KEY_KEYBOARD_F9:
+                return "F9";
+            case HID_USAGE_KEY_KEYBOARD_F10:
+                return "F10";
+            case HID_USAGE_KEY_KEYBOARD_F11:
+                return "F11";
+            case HID_USAGE_KEY_KEYBOARD_F12:
+                return "F12";
+
+            case HID_USAGE_KEY_KEYBOARD_HOME:
+                return "HOME";
+            case HID_USAGE_KEY_KEYBOARD_END:
+                return "END";
+            case HID_USAGE_KEY_KEYBOARD_PAGEUP:
+                return "PGUP";
+            case HID_USAGE_KEY_KEYBOARD_PAGEDOWN:
+                return "PGDN";
+            case HID_USAGE_KEY_KEYBOARD_INSERT:
+                return "INS";
+
+            case HID_USAGE_KEY_KEYBOARD_UNDO:
+                return "UNDO";
+            case HID_USAGE_KEY_KEYBOARD_CUT:
+                return "CUT";
+            case HID_USAGE_KEY_KEYBOARD_COPY:
+                return "COPY";
+            case HID_USAGE_KEY_KEYBOARD_PASTE:
+                return "PSTE";
+
+            case HID_USAGE_KEY_KEYBOARD_LEFTCONTROL:
+                return "LCTL";
+            case HID_USAGE_KEY_KEYBOARD_LEFTSHIFT:
+                return "LSFT";
+            case HID_USAGE_KEY_KEYBOARD_LEFTALT:
+                return "LALT";
+            case HID_USAGE_KEY_KEYBOARD_LEFT_GUI:
+                return "LGUI";
+            case HID_USAGE_KEY_KEYBOARD_RIGHTCONTROL:
+                return "RCTL";
+            case HID_USAGE_KEY_KEYBOARD_RIGHTSHIFT:
+                return "RSFT";
+            case HID_USAGE_KEY_KEYBOARD_RIGHTALT:
+                return "RALT";
+            case HID_USAGE_KEY_KEYBOARD_RIGHT_GUI:
+                return "RGUI";
+
             default:
-                return "UNK";
+                return NULL;
         }
     }
 
-    // Handle consumer keys (HID Usage Page 0x0C)
     if (usage_page == HID_USAGE_CONSUMER) {
         switch (keycode) {
             case HID_USAGE_CONSUMER_VOLUME_INCREMENT:
@@ -166,22 +214,40 @@ static const char* keycode_to_string(uint32_t keycode, uint16_t usage_page)
             case HID_USAGE_CONSUMER_SCAN_PREVIOUS_TRACK:
                 return "PREV";
             default:
-                return "CONS";
+                return NULL;
         }
     }
 
-    return "UNK";
+    return NULL;
 }
 
 void draw_keycode_status(lv_obj_t* canvas, const struct status_state* state, int x, int y)
 {
+    const char* key_name = keycode_to_string(state->keycode, state->usage_page);
+    char buf[20] = {0};
 
-    char text[7];
-    snprintf(text, sizeof(text), "%d", state->keycode);
-    draw_text(canvas, x, y, text);
+    // Combine implicit modifiers with globally active explicit modifiers
+    uint8_t mods = state->implicit_modifiers | zmk_hid_get_explicit_mods();
+    int pos = 0;
+    if (mods & MOD_LCTL) buf[pos++] = 'C';
+    if (mods & MOD_LSFT) buf[pos++] = 'S';
+    if (mods & MOD_LALT) buf[pos++] = 'A';
+    if (mods & MOD_LGUI) buf[pos++] = 'G';
 
-    char btext[9];
-    const char* key_name = keycode_to_string(state->keycode, HID_USAGE_KEY); // HID_USAGE_CONSUMER
-    snprintf(btext, sizeof(btext), "%s", key_name);
-    draw_text(canvas, x, y + 7, btext);
+    if (pos > 0) {
+        buf[pos++] = '-';
+    }
+
+    if (key_name) {
+        snprintf(buf + pos, sizeof(buf) - pos, "%s", key_name);
+    } else {
+        snprintf(buf + pos, sizeof(buf) - pos, "KEY:%02X", state->keycode);
+    }
+
+    draw_text(canvas, x, y, buf, true);
+
+    char hex[16];
+    // Show Usage Page and Decimal ID for debugging
+    snprintf(hex, sizeof(hex), "%02X %d", state->usage_page, state->keycode);
+    draw_text(canvas, x, y + 7, hex, true);
 }

@@ -6,6 +6,7 @@
 #include <zmk/battery.h>
 
 extern const lv_font_t pixel_operator_mono_8;
+extern const lv_font_t pixel_operator_mono_12;
 
 void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas)
 {
@@ -47,21 +48,35 @@ void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas)
     }
 }
 
-void draw_text(lv_obj_t *target_canvas, int x, int y, const char *text)
+void _draw_text(lv_obj_t *target_canvas, int x, int y, const char *text, bool small)
 {
     lv_draw_label_dsc_t label_dsc;
     lv_draw_label_dsc_init(&label_dsc);
     label_dsc.color = lv_color_make(0, 0, 0); // Black text (Index 0)
-    label_dsc.font = &pixel_operator_mono_8;
+    label_dsc.font = small ? &pixel_operator_mono_8 : &pixel_operator_mono_12;
 
     lv_layer_t layer;
     lv_canvas_init_layer(target_canvas, &layer);
 
     // Width is exactly 32px. Limit height to prevent wrapping.
-    lv_area_t area = {x, y, 31, y + 7};
+    lv_area_t area = {x, y, 31, y + 10};
     label_dsc.text = text;
     lv_draw_label(&layer, &label_dsc, &area);
 
+    lv_canvas_finish_layer(target_canvas, &layer);
+}
+
+void draw_img(lv_obj_t *target_canvas, int x, int y, const lv_img_dsc_t *img_dsc)
+{
+    lv_draw_image_dsc_t image_dsc;
+    lv_draw_image_dsc_init(&image_dsc);
+
+    lv_layer_t layer;
+    lv_canvas_init_layer(target_canvas, &layer);
+
+    lv_area_t area = {x, y, x + img_dsc->header.w - 1, y + img_dsc->header.h - 1};
+    image_dsc.src = img_dsc;
+    lv_draw_image(&layer, &image_dsc, &area);
     lv_canvas_finish_layer(target_canvas, &layer);
 }
 
