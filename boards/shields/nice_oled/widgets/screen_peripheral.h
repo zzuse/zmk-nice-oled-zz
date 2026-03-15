@@ -6,11 +6,6 @@
 #include <lvgl.h>
 #include <zephyr/kernel.h>
 
-struct battery_status_state {
-    uint8_t level;
-    bool usb_present;
-};
-
 struct peripheral_status_state {
     bool connected;
 };

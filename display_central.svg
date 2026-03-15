@@ -1,0 +1,49 @@
+<svg viewBox="-2 -22 132 58" width="660" height="290" xmlns="http://www.w3.org/2000/svg" style="font-family: monospace;">
+  <!-- Physical screen 128x32 -->
+  <rect x="0" y="0" width="128" height="32" fill="#000" stroke="#444" stroke-width="0.5"/>
+
+  <!-- Left Side (High Logic Y) -->
+  
+  <!-- X:0-9 Battery (Logic Y:118) -->
+  <rect x="0" y="0" width="10" height="32" fill="#120" stroke="#fa0" stroke-width="0.4" opacity="0.4"/>
+  <text x="5" y="6" fill="#fa0" font-size="5" text-anchor="middle" writing-mode="tb">100%</text>
+  <text x="5" y="28" fill="#fa0" font-size="5" text-anchor="middle">⚡</text>
+  <text x="5" y="-5" fill="#fa0" font-size="3.5" text-anchor="middle">BAT</text>
+
+  <!-- X:10-34 System Output (Logic Y:104) -->
+  <rect x="10" y="0" width="25" height="32" fill="#001" stroke="#44f" stroke-width="0.4"/>
+  <text x="22.5" y="10" fill="#44f" font-size="6" text-anchor="middle">USB</text>
+  <text x="22.5" y="24" fill="#0af" font-size="5" text-anchor="middle">BLE 1</text>
+  <text x="22" y="-5" fill="#44f" font-size="3.5" text-anchor="middle">OUT</text>
+
+  <!-- Center (Direct Physical Draw) -->
+
+  <!-- X:35-103 Animation (Crystal Gem) -->
+  <rect x="35" y="0" width="69" height="32" fill="rgba(0,255,200,0.05)" stroke="cyan" stroke-width="0.5" stroke-dasharray="2"/>
+  <text x="69.5" y="14" fill="cyan" font-size="6" text-anchor="middle" opacity="0.6">ANIMATION</text>
+  <text x="69.5" y="25" fill="cyan" font-size="4" text-anchor="middle" opacity="0.6">69×68 (32 visible)</text>
+  <text x="69.5" y="-5" fill="cyan" font-size="3.5" text-anchor="middle">GEMS</text>
+
+  <!-- Right Side (Low Logic Y) -->
+
+  <!-- X:104-113 Keycode (Logic Y:20) -->
+  <rect x="98" y="0" width="6" height="32" fill="#113" stroke="#88f" stroke-width="0.3"/>
+  <text x="100" y="2" fill="#88f" font-size="3" text-anchor="start" writing-mode="tb">0x002C</text>
+  <text x="100" y="-5" fill="#88f" font-size="3.5" text-anchor="middle">CODE</text>
+    
+  <rect x="107" y="0" width="6" height="32" fill="#113" stroke="#88f" stroke-width="0.3"/>
+  <text x="109" y="2" fill="#fff" font-size="3" text-anchor="start" writing-mode="tb">SPACE</text>
+  <text x="109" y="-5" fill="#88f" font-size="3.5" text-anchor="middle">KEY</text>
+
+  <!-- X:114-123 Uptime (Logic Y:10) -->
+  <rect x="114" y="0" width="8" height="32" fill="#202" stroke="#f8c" stroke-width="0.4"/>
+  <text x="119" y="2" fill="#f8c" font-size="5" text-anchor="start" writing-mode="tb">3600s</text>
+  <text x="119" y="-5" fill="#f8c" font-size="3.5" text-anchor="middle">UP</text>
+
+  <!-- X:124-127 Layer (Logic Y:0) -->
+  <rect x="122" y="0" width="6" height="32" fill="#020" stroke="#4a4" stroke-width="0.4"/>
+  <text x="126" y="2" fill="#4a4" font-size="5" text-anchor="start" writing-mode="tb">BASE*</text>
+  <text x="126" y="-5" fill="#4a4" font-size="3.5" text-anchor="middle">LYR</text>
+
+  <text x="64" y="-14" fill="#aaa" font-size="4" text-anchor="middle">← 128px physical width →</text>
+</svg>
