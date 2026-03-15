@@ -113,6 +113,8 @@ K_TIMER_DEFINE(uptime_timer, uptime_timer_handler, NULL);
 static void set_keycode_status(struct zmk_widget_screen *widget, struct status_state state)
 {
     widget->state.keycode = state.keycode;
+    widget->state.usage_page = state.usage_page;
+    widget->state.implicit_modifiers = state.implicit_modifiers;
     draw_canvas(widget->obj, &widget->state);
 }
 
