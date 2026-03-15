@@ -23,7 +23,7 @@ The nice!oled shield is a ZMK firmware module that provides a customizable OLED 
 ## Installation
 To use the nice!oled shield in your ZMK firmware:
 
-1. Add this repository as a Zephyr module in your `zmk-config`:
+Add this repository as a Zephyr module in your `zmk-config`:
    ```bash
    west.yml: 
      - name: zmk-nice-oled-zz
@@ -31,8 +31,9 @@ To use the nice!oled shield in your ZMK firmware:
        revision: main
    ```
 
-## Configuration
-The following Kconfig options are available:
+## Layout Design
+![central](./display_central.svg)
+![peripheral](./display_peripheral.svg)
 
 ## Customization
 You can customize the display by:
