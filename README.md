@@ -16,11 +16,9 @@ The nice!oled shield is a ZMK firmware module that provides a customizable OLED 
 - **Layer Display**: Indicates the currently active keyboard layer
 - **Modifier Keys**: Displays the state of modifier keys (Ctrl, Alt, Shift, etc.)
 - **Output Profiles**: Shows the active output profile (BLE, USB) and connection status
-- **WPM Counter**: Real-time words per minute tracking
 - **Keycode Display**: Shows the last pressed keycode
 - **Animations**: Optional animations (like Luna the dog) for visual feedback
 - **Custom Fonts**: Supports custom fonts (including PixelOperatorMono in multiple sizes)
-- **Inverted Color Scheme**: Configurable light/dark mode
 
 ## Installation
 To use the nice!oled shield in your ZMK firmware:
@@ -33,24 +31,13 @@ To use the nice!oled shield in your ZMK firmware:
        revision: main
    ```
 
-2. Enable the shield in your `.conf` file:
-   ```
-   CONFIG_NICE_VIEW_WIDGET=y
-   CONFIG_ZMK_DISPLAY=y
-   ```
-
-3. Add the shield to your keyboard's `.keymap` file
-
 ## Configuration
 The following Kconfig options are available:
-- `CONFIG_NICE_VIEW_WIDGET_INVERTED`: Invert display colors (default: n)
-- `CONFIG_NICE_VIEW_WIDGET_STATUS`: Enable status screen (default: y)
-- `CONFIG_NICE_VIEW_WIDGET_ANIMATION`: Enable animations (default: y)
 
 ## Customization
 You can customize the display by:
-- Adding custom fonts in `boards/shields/nice_oled/assets/`
-- Adding custom images for animations
+- Adding fonts in `boards/shields/nice_oled/assets/`
+- Adding images for animations
 - Modifying the widget layouts in `boards/shields/nice_oled/widgets/`
 
 ## Widget Reference
@@ -73,5 +60,6 @@ Displays active output profile (BLE/USB)
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ## Contributors
 - zzuse (Maintainer) Modify to suit my own needs
