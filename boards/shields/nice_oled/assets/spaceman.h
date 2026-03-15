@@ -28,12 +28,11 @@ LV_IMG_DECLARE(spaceman_19);
 
 // -------- Array of Pointers to Image Descriptors --------
 // Provides easy access to all images defined in the corresponding .c file
-const lv_img_dsc_t *spaceman_flip_images[20]
+#define SPACEMAN_FRAME_COUNT 20
+const lv_img_dsc_t *spaceman_flip_images[SPACEMAN_FRAME_COUNT]
     = {&spaceman_00, &spaceman_01, &spaceman_02, &spaceman_03, &spaceman_04, &spaceman_05, &spaceman_06,
        &spaceman_07, &spaceman_08, &spaceman_09, &spaceman_10, &spaceman_11, &spaceman_12, &spaceman_13,
        &spaceman_14, &spaceman_15, &spaceman_16, &spaceman_17, &spaceman_18, &spaceman_19};
-
-#define SPACEMAN_FLIP_IMAGES_NUM_IMAGES 20
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -1,29 +1,7 @@
 #include "animation.h"
+#include "../assets/crystal.h"
 #include "../assets/spaceman.h"
 #include <zephyr/kernel.h>
-
-LV_IMG_DECLARE(crystal_01);
-LV_IMG_DECLARE(crystal_02);
-LV_IMG_DECLARE(crystal_03);
-LV_IMG_DECLARE(crystal_04);
-LV_IMG_DECLARE(crystal_05);
-LV_IMG_DECLARE(crystal_06);
-LV_IMG_DECLARE(crystal_07);
-LV_IMG_DECLARE(crystal_08);
-LV_IMG_DECLARE(crystal_09);
-LV_IMG_DECLARE(crystal_10);
-LV_IMG_DECLARE(crystal_11);
-LV_IMG_DECLARE(crystal_12);
-LV_IMG_DECLARE(crystal_13);
-LV_IMG_DECLARE(crystal_14);
-LV_IMG_DECLARE(crystal_15);
-LV_IMG_DECLARE(crystal_16);
-
-#define CRYSTAL_FRAME_COUNT 16
-static const lv_img_dsc_t *crystal_imgs[] = {
-    &crystal_01, &crystal_02, &crystal_03, &crystal_04, &crystal_05, &crystal_06, &crystal_07, &crystal_08,
-    &crystal_09, &crystal_10, &crystal_11, &crystal_12, &crystal_13, &crystal_14, &crystal_15, &crystal_16,
-};
 
 static int animation_frame = 0;
 static lv_timer_t *anim_timer = NULL;
@@ -94,7 +72,7 @@ static void spaceman_timer_cb(lv_timer_t *timer)
     lv_obj_invalidate(global_phys_canvas);
 
     // Advance frame
-    animation_frame = (animation_frame + 1) % SPACEMAN_FLIP_IMAGES_NUM_IMAGES;
+    animation_frame = (animation_frame + 1) % SPACEMAN_FRAME_COUNT;
 }
 
 void draw_animation(lv_obj_t *phys_canvas)

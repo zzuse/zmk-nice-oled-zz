@@ -229,66 +229,31 @@ void draw_keycode_status(lv_obj_t* canvas, const struct status_state* state, int
 {
     const char* key_name = keycode_to_string(state->keycode, state->usage_page);
     char buf[20] = {0};
-
-    // Combine implicit modifiers with globally active explicit modifiers
     uint8_t mods = state->implicit_modifiers | zmk_hid_get_explicit_mods();
-    int pos = 0;
-    if (mods & MOD_LCTL) buf[pos++] = 'C';
-    if (mods & MOD_LSFT) buf[pos++] = 'S';
-    if (mods & MOD_LALT) buf[pos++] = 'O';
-    if (mods & MOD_LGUI) buf[pos++] = 'M';
 
-    if (pos > 0) {
-        buf[pos++] = '-';
-    }
+    int x_mod = x;
 
-    if (key_name) {
-        snprintf(buf + pos, sizeof(buf) - pos, "%s", key_name);
+    if (mods == 0) {
+        // No modifiers pressed, display just the key name on the top line
+        snprintf(buf, sizeof(buf), "%s %02X:%02X", key_name, state->usage_page, state->keycode);
+        draw_text(canvas, x, y, buf, true);
     } else {
-        snprintf(buf + pos, sizeof(buf) - pos, "KEY:%02X", state->keycode);
+        // Modifiers pressed, draw icons
+        if (mods & (MOD_LCTL | MOD_RCTL)) {
+            draw_img(canvas, x_mod, y, &control_0);
+        }
+        if (mods & (MOD_LSFT | MOD_RSFT)) {
+            draw_img(canvas, x_mod + 7, y, &shift_0);
+        }
+        if (mods & (MOD_LALT | MOD_RALT)) {
+            draw_img(canvas, x_mod + 14, y, &opt_0);
+        }
+        if (mods & (MOD_LGUI | MOD_RGUI)) {
+            draw_img(canvas, x_mod + 21, y, &cmd_0);
+        }
+
+        // Draw the key string below the modifier icons
+        snprintf(buf, sizeof(buf), "%s %02X:%02X", key_name, state->usage_page, state->keycode);
+        draw_text(canvas, x, y + 7, buf, true);
     }
-
-    draw_text(canvas, x, y, buf, true);
-
-    char hex[16];
-    // Show Usage Page and Decimal ID for debugging
-    snprintf(hex, sizeof(hex), "%02X %d", state->usage_page, state->keycode);
-    draw_text(canvas, x, y + 7, hex, true);
-}
-
-void draw_keycode_status_peripheral(lv_obj_t* canvas, const struct status_state* state, int x, int y)
-{
-    const char* key_name = keycode_to_string(state->keycode, state->usage_page);
-    char buf[20] = {0};
-    // Peripherals do not have access to zmk_hid_get_explicit_mods()
-    // It will only show combined implicit_modifiers from macros unless passed from central
-    uint8_t mods = state->implicit_modifiers;
-
-    int y_mod = y;
-
-    // Center icons (14x14 px) on the 32px canvas width (x=9)
-    if (mods & (MOD_LCTL | MOD_RCTL)) {
-        draw_img(canvas, x, y_mod, &control_0);
-    }
-    if (mods & (MOD_LSFT | MOD_RSFT)) {
-        draw_img(canvas, x + 7, y_mod, &shift_0);
-    }
-    if (mods & (MOD_LALT | MOD_RALT)) {
-        draw_img(canvas, x + 14, y_mod, &opt_0);
-    }
-    if (mods & (MOD_LGUI | MOD_RGUI)) {
-        draw_img(canvas, x + 21, y_mod, &cmd_0);
-    }
-
-    if (key_name) {
-        snprintf(buf, sizeof(buf), "%s", key_name);
-    } else {
-        snprintf(buf, sizeof(buf), "KEY:%02X", state->keycode);
-    }
-
-    draw_text(canvas, x, y_mod, buf, true);
-
-    char hex[16];
-    snprintf(hex, sizeof(hex), "%02X %d", state->usage_page, state->keycode);
-    draw_text(canvas, x, y_mod + 10, hex, true);
 }

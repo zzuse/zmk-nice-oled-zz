@@ -9,7 +9,7 @@
 
   <!-- Y:16 Uptime -->
   <rect x="16" y="0" width="10" height="32" fill="#202" stroke="#f8c" stroke-width="0.4"/>
-  <text x="21" y="4" fill="#f8c" font-size="5" text-anchor="middle" writing-mode="tb">99999</text>
+  <text x="21" y="8" fill="#f8c" font-size="5" text-anchor="middle" writing-mode="tb">99999</text>
 
   <!-- Y:26-103 Animation (Spaceman) -->
   <rect x="26" y="0" width="78" height="32" fill="rgba(0,255,200,0.1)" stroke="cyan" stroke-width="0.5" stroke-dasharray="2"/>
@@ -19,11 +19,11 @@
   <!-- Y:106 Connection Stack -->
   <rect x="106" y="0" width="10" height="32" fill="#003" stroke="#44f" stroke-width="0.4"/>
   <!-- L<=ON uses normal text. y start is 106. -->
-  <text x="111" y="4" fill="#44f" font-size="5" text-anchor="middle" writing-mode="tb">L&lt;=ON</text>
+  <text x="111" y="8" fill="#44f" font-size="5" text-anchor="middle" writing-mode="tb">L&lt;=ON</text>
 
   <!-- Y:118 Battery Strip -->
   <rect x="118" y="0" width="10" height="32" fill="#2a1a00" stroke="#fa0" stroke-width="0.4" opacity="0.3"/>
-  <text x="123" y="4" fill="#fa0" font-size="5" text-anchor="middle" writing-mode="tb">100%</text>
+  <text x="123" y="8" fill="#fa0" font-size="5" text-anchor="middle" writing-mode="tb">100%</text>
   <text x="123" y="28" fill="#ff0" font-size="5" text-anchor="middle">⚡</text>
 
   <!-- Labels -->
