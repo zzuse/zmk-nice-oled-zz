@@ -14,6 +14,9 @@ struct status_state {
     uint8_t battery;
     bool charging;
     uint32_t uptime_seconds;
+    uint32_t keycode;
+    uint16_t usage_page;
+    uint8_t implicit_modifiers;
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     struct zmk_endpoint_instance selected_endpoint;
     int active_profile_index;
@@ -22,19 +25,18 @@ struct status_state {
     uint8_t layer_index;
     const char *layer_label;
     uint8_t mod_state;
-    uint32_t keycode;
-    uint16_t usage_page;
-    uint8_t implicit_modifiers;
 #else
     bool connected;
 #endif
 };
 
+// draw_text1 is 12pixel draw_text2 is 8pixel, big is 16pixel
 void _draw_text(lv_obj_t *target_canvas, int x, int y, const char *text, bool small);
 #define draw_text1(canvas, x, y, text) _draw_text(canvas, x, y, text, false)
 #define draw_text2(canvas, x, y, text, small) _draw_text(canvas, x, y, text, small)
 #define GET_DRAW_TEXT(_1, _2, _3, _4, _5, NAME, ...) NAME
 #define draw_text(...) GET_DRAW_TEXT(__VA_ARGS__, draw_text2, draw_text1)(__VA_ARGS__)
+void draw_text_big(lv_obj_t *target_canvas, int x, int y, const char *text);
 
 void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas);
 void draw_background(lv_obj_t *canvas);

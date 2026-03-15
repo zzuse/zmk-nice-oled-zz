@@ -10,6 +10,8 @@ if(CONFIG_ZMK_DISPLAY)
   zephyr_library_sources(widgets/keycode.c)
   zephyr_library_sources(assets/images.c)
   zephyr_library_sources(assets/crystal.c)
+  zephyr_library_sources(assets/spaceman.c)
+  zephyr_library_sources(assets/modifiers_6x6.c)
 
   if(NOT CONFIG_ZMK_SPLIT OR CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     zephyr_library_sources(widgets/screen.c)

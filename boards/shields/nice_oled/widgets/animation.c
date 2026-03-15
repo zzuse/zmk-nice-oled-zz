@@ -1,4 +1,5 @@
 #include "animation.h"
+#include "../assets/spaceman.h"
 #include <zephyr/kernel.h>
 
 LV_IMG_DECLARE(crystal_01);
@@ -84,11 +85,32 @@ static void anim_timer_cb(lv_timer_t *timer)
     animation_frame = (animation_frame + 1) % CRYSTAL_FRAME_COUNT;
 }
 
+static void spaceman_timer_cb(lv_timer_t *timer)
+{
+    if (!global_phys_canvas) return;
+
+    // Draw current frame (Opaque to clean last frame)
+    blit_i1_to_canvas_opaque(global_phys_canvas, spaceman_flip_images[animation_frame], 24, -18);
+    lv_obj_invalidate(global_phys_canvas);
+
+    // Advance frame
+    animation_frame = (animation_frame + 1) % SPACEMAN_FLIP_IMAGES_NUM_IMAGES;
+}
+
 void draw_animation(lv_obj_t *phys_canvas)
 {
     global_phys_canvas = phys_canvas;
 
     if (anim_timer == NULL) {
         anim_timer = lv_timer_create(anim_timer_cb, 60, NULL);
+    }
+}
+
+void draw_spaceman(lv_obj_t *phys_canvas)
+{
+    global_phys_canvas = phys_canvas;
+
+    if (anim_timer == NULL) {
+        anim_timer = lv_timer_create(spaceman_timer_cb, 60, NULL);
     }
 }

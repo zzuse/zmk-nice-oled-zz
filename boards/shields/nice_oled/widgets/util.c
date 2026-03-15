@@ -7,6 +7,7 @@
 
 extern const lv_font_t pixel_operator_mono_8;
 extern const lv_font_t pixel_operator_mono_12;
+extern const lv_font_t pixel_operator_mono;
 
 void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas)
 {
@@ -60,6 +61,24 @@ void _draw_text(lv_obj_t *target_canvas, int x, int y, const char *text, bool sm
 
     // Width is exactly 32px. Limit height to prevent wrapping.
     lv_area_t area = {x, y, 31, y + 10};
+    label_dsc.text = text;
+    lv_draw_label(&layer, &label_dsc, &area);
+
+    lv_canvas_finish_layer(target_canvas, &layer);
+}
+
+void draw_text_big(lv_obj_t *target_canvas, int x, int y, const char *text)
+{
+    lv_draw_label_dsc_t label_dsc;
+    lv_draw_label_dsc_init(&label_dsc);
+    label_dsc.color = lv_color_make(0, 0, 0); // Black text (Index 0)
+    label_dsc.font = &pixel_operator_mono;
+
+    lv_layer_t layer;
+    lv_canvas_init_layer(target_canvas, &layer);
+
+    // Width is exactly 32px. Limit height to prevent wrapping.
+    lv_area_t area = {x, y, 31, y + 14};
     label_dsc.text = text;
     lv_draw_label(&layer, &label_dsc, &area);
 

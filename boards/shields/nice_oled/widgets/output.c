@@ -1,5 +1,4 @@
 #include "output.h"
-#include "../assets/custom_fonts.h"
 #include <zephyr/kernel.h>
 
 LV_IMG_DECLARE(bt_no_signal);
@@ -7,13 +6,10 @@ LV_IMG_DECLARE(bt_unbonded);
 LV_IMG_DECLARE(bt);
 LV_IMG_DECLARE(usb);
 
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 static void draw_usb_connected(lv_obj_t *canvas, int x, int y) { draw_img(canvas, x, y, &usb); }
 
 static void draw_ble_unbonded(lv_obj_t *canvas, int x, int y) { draw_img(canvas, x, y, &bt_unbonded); }
-
-static void draw_ble_disconnected(lv_obj_t *canvas, int x, int y) { draw_img(canvas, x, y, &bt_no_signal); }
-
-static void draw_ble_connected(lv_obj_t *canvas, int x, int y) { draw_img(canvas, x, y, &bt); }
 
 static void draw_ble_profile_number(lv_obj_t *canvas, int x, int y, int profile_number)
 {
@@ -21,6 +17,11 @@ static void draw_ble_profile_number(lv_obj_t *canvas, int x, int y, int profile_
     snprintf(buf, sizeof(buf), "%d", profile_number);
     draw_text(canvas, x, y, buf);
 }
+#endif
+
+static void draw_ble_disconnected(lv_obj_t *canvas, int x, int y) { draw_img(canvas, x, y, &bt_no_signal); }
+
+static void draw_ble_connected(lv_obj_t *canvas, int x, int y) { draw_img(canvas, x, y, &bt); }
 
 void draw_output_status(lv_obj_t *canvas, const struct status_state *state, int x, int y)
 {
@@ -47,9 +48,9 @@ void draw_output_status(lv_obj_t *canvas, const struct status_state *state, int 
     }
 #else
     if (state->connected) {
-        draw_ble_connected(canvas);
+        draw_ble_connected(canvas, x, y);
     } else {
-        draw_ble_disconnected(canvas);
+        draw_ble_disconnected(canvas, x, y);
     }
 #endif
 }
