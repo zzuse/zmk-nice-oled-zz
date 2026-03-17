@@ -199,7 +199,7 @@ static const char* keycode_to_string(uint32_t keycode, uint16_t usage_page)
                 return "RGUI";
 
             default:
-                return NULL;
+                return "UNKN";
         }
     }
 
@@ -218,11 +218,11 @@ static const char* keycode_to_string(uint32_t keycode, uint16_t usage_page)
             case HID_USAGE_CONSUMER_SCAN_PREVIOUS_TRACK:
                 return "PREV";
             default:
-                return NULL;
+                return "UNKN";
         }
     }
 
-    return NULL;
+    return "UNKN";
 }
 
 void draw_keycode_status(lv_obj_t* canvas, const struct status_state* state, int x, int y)
