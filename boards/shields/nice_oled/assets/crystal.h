@@ -23,10 +23,7 @@ LV_IMG_DECLARE(crystal_15);
 LV_IMG_DECLARE(crystal_16);
 
 #define CRYSTAL_FRAME_COUNT 16
-const lv_img_dsc_t *crystal_imgs[CRYSTAL_FRAME_COUNT] = {
-    &crystal_01, &crystal_02, &crystal_03, &crystal_04, &crystal_05, &crystal_06, &crystal_07, &crystal_08,
-    &crystal_09, &crystal_10, &crystal_11, &crystal_12, &crystal_13, &crystal_14, &crystal_15, &crystal_16,
-};
+extern const lv_img_dsc_t *crystal_imgs[CRYSTAL_FRAME_COUNT];
 
 #ifdef __cplusplus
 } /* extern "C" */

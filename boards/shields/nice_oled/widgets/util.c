@@ -60,7 +60,7 @@ void _draw_text(lv_obj_t *target_canvas, int x, int y, const char *text, bool sm
     lv_canvas_init_layer(target_canvas, &layer);
 
     // Width is exactly 32px. Limit height to prevent wrapping.
-    lv_area_t area = {x, y, 31, y + 10};
+    lv_area_t area = {x, y, CANVAS_WIDTH - 1, y + 10};
     label_dsc.text = text;
     lv_draw_label(&layer, &label_dsc, &area);
 
@@ -78,7 +78,7 @@ void draw_text_big(lv_obj_t *target_canvas, int x, int y, const char *text)
     lv_canvas_init_layer(target_canvas, &layer);
 
     // Width is exactly 32px. Limit height to prevent wrapping.
-    lv_area_t area = {x, y, 31, y + 14};
+    lv_area_t area = {x, y, CANVAS_WIDTH - 1, y + 14};
     label_dsc.text = text;
     lv_draw_label(&layer, &label_dsc, &area);
 
