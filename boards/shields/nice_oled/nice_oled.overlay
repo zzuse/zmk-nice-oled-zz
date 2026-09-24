@@ -3,3 +3,9 @@
  *
  * SPDX-License-Identifier: MIT
  */
+
+// SSD1306 supports 400 kHz; the 100 kHz default takes ~47 ms per full-screen
+// flush, which leaves no headroom for the 60 ms animation frames.
+&pro_micro_i2c {
+    clock-frequency = <400000>;
+};

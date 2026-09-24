@@ -33,7 +33,7 @@ static void draw_canvas(lv_obj_t *widget, struct status_state *state)
 
     global_draw_count++;
     // clear
-    lv_canvas_fill_bg(global_logic_canvas, lv_color_make(0, 0, 1), LV_OPA_COVER);
+    clear_canvas_white(global_logic_canvas);
     // layer
     draw_layer_status(global_logic_canvas, state, global_draw_count, 0, 0);
 
@@ -215,7 +215,7 @@ ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_active_profile_changed);
  * Initialization
  **/
 
-LV_DRAW_BUF_DEFINE_STATIC(logic_draw_buf, 128, 128, LV_COLOR_FORMAT_I1);
+LV_DRAW_BUF_DEFINE_STATIC(logic_draw_buf, CANVAS_WIDTH, CANVAS_HEIGHT, LV_COLOR_FORMAT_I1);
 LV_DRAW_BUF_DEFINE_STATIC(phys_draw_buf, 128, 32, LV_COLOR_FORMAT_I1);
 
 int zmk_widget_screen_init(struct zmk_widget_screen *screen, lv_obj_t *parent)

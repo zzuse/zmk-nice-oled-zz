@@ -101,6 +101,15 @@ void draw_img(lv_obj_t *target_canvas, int x, int y, const lv_img_dsc_t *img_dsc
 
 void draw_background(lv_obj_t *canvas) { lv_canvas_fill_bg(canvas, LVGL_BACKGROUND, LV_OPA_COVER); }
 
+void clear_canvas_white(lv_obj_t *canvas)
+{
+    // lv_canvas_fill_bg has no fast path for I1 and calls lv_canvas_set_px per pixel,
+    // which stalls the display thread long enough to hitch the animation.
+    lv_draw_buf_t *buf = lv_canvas_get_draw_buf(canvas);
+    uint8_t *pixels = lv_draw_buf_goto_xy(buf, 0, 0); // skips the I1 palette
+    memset(pixels, 0xFF, buf->header.stride * buf->header.h); // Index 1 = white
+}
+
 uint8_t get_natural_battery_level(void)
 {
     const struct device *batt_dev = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zmk_battery));

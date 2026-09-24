@@ -64,8 +64,15 @@ static void anim_timer_cb(lv_timer_t *timer)
 
     // Advance, then draw (Opaque to clean last frame)
     animation_frame = (animation_frame + 1) % anim_frame_count;
-    blit_i1_to_canvas_opaque(global_phys_canvas, anim_frames[animation_frame], ANIM_X, ANIM_Y);
-    lv_obj_invalidate(global_phys_canvas);
+    const lv_img_dsc_t *img = anim_frames[animation_frame];
+    blit_i1_to_canvas_opaque(global_phys_canvas, img, ANIM_X, ANIM_Y);
+
+    // Only flush the columns the animation covers, not the whole screen (LVGL clips to the canvas)
+    lv_area_t area;
+    lv_obj_get_coords(global_phys_canvas, &area);
+    area.x1 += ANIM_X;
+    area.x2 = area.x1 + img->header.w - 1;
+    lv_obj_invalidate_area(global_phys_canvas, &area);
 }
 
 static void start_animation(lv_obj_t *phys_canvas, const lv_img_dsc_t *const *frames, int frame_count)

@@ -40,5 +40,6 @@ void draw_text_big(lv_obj_t *target_canvas, int x, int y, const char *text);
 
 void rotate_canvas(lv_obj_t *phys_canvas, lv_obj_t *logic_canvas);
 void draw_background(lv_obj_t *canvas);
+void clear_canvas_white(lv_obj_t *canvas);
 uint8_t get_natural_battery_level(void);
 void draw_img(lv_obj_t *target_canvas, int x, int y, const lv_img_dsc_t *img_dsc);
