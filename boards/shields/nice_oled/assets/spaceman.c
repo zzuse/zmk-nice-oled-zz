@@ -1,5 +1,6 @@
 /* Generated using lvgl_img_converter.py (bundle_images_to_c - Default BlackBG/WhiteFG) */
 /* Contains 20 image(s). */
+#include "spaceman.h"
 #include <lvgl.h>
 
 #ifndef LV_ATTRIBUTE_MEM_ALIGN
@@ -1185,3 +1186,8 @@ const lv_img_dsc_t spaceman_19 = {
     .data_size = 620,
     .data = spaceman_19_map,
 };
+
+const lv_img_dsc_t *spaceman_flip_images[SPACEMAN_FRAME_COUNT]
+    = {&spaceman_00, &spaceman_01, &spaceman_02, &spaceman_03, &spaceman_04, &spaceman_05, &spaceman_06,
+       &spaceman_07, &spaceman_08, &spaceman_09, &spaceman_10, &spaceman_11, &spaceman_12, &spaceman_13,
+       &spaceman_14, &spaceman_15, &spaceman_16, &spaceman_17, &spaceman_18, &spaceman_19};
