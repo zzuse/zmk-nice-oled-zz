@@ -130,8 +130,9 @@ static uint8_t last_implicit_modifiers = 0;
 
 struct status_state keycode_status_get_state(const zmk_event_t *eh)
 {
-    const struct zmk_keycode_state_changed *ev = as_zmk_keycode_state_changed(eh);
-    if (ev->state) { // Only on key press, not release
+    // eh is NULL when ZMK_DISPLAY_WIDGET_LISTENER's init fetches the initial state
+    const struct zmk_keycode_state_changed *ev = eh ? as_zmk_keycode_state_changed(eh) : NULL;
+    if (ev && ev->state) { // Only on key press, not release
         last_keycode = ev->keycode;
         last_usage_page = ev->usage_page;
         last_implicit_modifiers = ev->implicit_modifiers;

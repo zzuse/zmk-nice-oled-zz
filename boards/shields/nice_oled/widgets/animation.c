@@ -51,44 +51,41 @@ static void blit_i1_to_canvas_opaque(lv_obj_t *canvas, const lv_img_dsc_t *img, 
     }
 }
 
+#define ANIM_X 24
+#define ANIM_Y -18
+#define ANIM_PERIOD_MS 60
+
+static const lv_img_dsc_t *const *anim_frames = NULL;
+static int anim_frame_count = 0;
+
 static void anim_timer_cb(lv_timer_t *timer)
 {
-    if (!global_phys_canvas) return;
+    if (!global_phys_canvas || !anim_frames) return;
 
-    // Draw current frame (Opaque to clean last frame)
-    blit_i1_to_canvas_opaque(global_phys_canvas, crystal_imgs[animation_frame], 24, -18);
+    // Advance, then draw (Opaque to clean last frame)
+    animation_frame = (animation_frame + 1) % anim_frame_count;
+    blit_i1_to_canvas_opaque(global_phys_canvas, anim_frames[animation_frame], ANIM_X, ANIM_Y);
     lv_obj_invalidate(global_phys_canvas);
-
-    // Advance frame
-    animation_frame = (animation_frame + 1) % CRYSTAL_FRAME_COUNT;
 }
 
-static void spaceman_timer_cb(lv_timer_t *timer)
-{
-    if (!global_phys_canvas) return;
-
-    // Draw current frame (Opaque to clean last frame)
-    blit_i1_to_canvas_opaque(global_phys_canvas, spaceman_flip_images[animation_frame], 24, -18);
-    lv_obj_invalidate(global_phys_canvas);
-
-    // Advance frame
-    animation_frame = (animation_frame + 1) % SPACEMAN_FRAME_COUNT;
-}
-
-void draw_animation(lv_obj_t *phys_canvas)
+static void start_animation(lv_obj_t *phys_canvas, const lv_img_dsc_t *const *frames, int frame_count)
 {
     global_phys_canvas = phys_canvas;
+    anim_frames = frames;
+    anim_frame_count = frame_count;
+
+    // rotate_canvas() just wiped the whole canvas; restore the current frame right away
+    // instead of leaving the area blank until the next timer tick (visible 1 Hz stutter).
+    blit_i1_to_canvas_opaque(phys_canvas, anim_frames[animation_frame], ANIM_X, ANIM_Y);
 
     if (anim_timer == NULL) {
-        anim_timer = lv_timer_create(anim_timer_cb, 60, NULL);
+        anim_timer = lv_timer_create(anim_timer_cb, ANIM_PERIOD_MS, NULL);
     }
 }
+
+void draw_animation(lv_obj_t *phys_canvas) { start_animation(phys_canvas, crystal_imgs, CRYSTAL_FRAME_COUNT); }
 
 void draw_spaceman(lv_obj_t *phys_canvas)
 {
-    global_phys_canvas = phys_canvas;
-
-    if (anim_timer == NULL) {
-        anim_timer = lv_timer_create(spaceman_timer_cb, 60, NULL);
-    }
+    start_animation(phys_canvas, spaceman_flip_images, SPACEMAN_FRAME_COUNT);
 }

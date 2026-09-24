@@ -1,6 +1,7 @@
 if(CONFIG_ZMK_DISPLAY)
   zephyr_library_include_directories(${CMAKE_SOURCE_DIR}/include)
   zephyr_library_sources(custom_status_screen.c)
+  zephyr_library_sources_ifdef(CONFIG_NICE_OLED_REBOOT_ON_FATAL fatal.c)
   zephyr_library_sources(widgets/util.c)
   zephyr_library_sources(widgets/layer.c)
   zephyr_library_sources(widgets/uptime.c)

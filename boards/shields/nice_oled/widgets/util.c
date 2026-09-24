@@ -106,13 +106,15 @@ uint8_t get_natural_battery_level(void)
     const struct device *batt_dev = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zmk_battery));
     if (batt_dev == NULL || !device_is_ready(batt_dev)) return zmk_battery_state_of_charge();
 
+    // Read the voltage cached by ZMK's own periodic battery sample; calling
+    // sensor_sample_fetch here would do a blocking ADC read inside the event listener.
     struct sensor_value voltage;
-    if (sensor_sample_fetch_chan(batt_dev, SENSOR_CHAN_GAUGE_VOLTAGE) != 0) {
+    if (sensor_channel_get(batt_dev, SENSOR_CHAN_GAUGE_VOLTAGE, &voltage) != 0) {
         return zmk_battery_state_of_charge();
     }
-    sensor_channel_get(batt_dev, SENSOR_CHAN_GAUGE_VOLTAGE, &voltage);
 
     int16_t mv = voltage.val1 * 1000 + (voltage.val2 / 1000);
+    if (mv == 0) return zmk_battery_state_of_charge(); // not sampled yet
 
     if (mv >= 4150) return 100;
     if (mv >= 4000) return 90 + (mv - 4000) * 10 / 150;
