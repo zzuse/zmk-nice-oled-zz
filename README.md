@@ -46,6 +46,18 @@ The following Kconfig options are available:
 - `CONFIG_NICE_VIEW_WIDGET_INVERTED`: Invert display colors (default: n)
 - `CONFIG_NICE_VIEW_WIDGET_STATUS`: Enable status screen (default: y)
 - `CONFIG_NICE_VIEW_WIDGET_ANIMATION`: Enable animations (default: y)
+- `CONFIG_NICE_OLED_PERIPHERAL_CRYSTAL`: Show the crystal animation on a peripheral instead of the spaceman, e.g. when a dongle is the central (default: n)
+
+## Dongle Display
+`boards/shields/dongle_display` is a 128x64 status screen for a dongle (central), vendored from
+[englmaxi/zmk-dongle-display](https://github.com/englmaxi/zmk-dongle-display) (MIT). Add it next to your dongle shield:
+```yaml
+  - board: nice_nano//zmk
+    shield: sofle_dongle dongle_display
+```
+The dongle shield defines the OLED node; for a 1.3" SH1106 use `compatible = "sinowealth,sh1106"` with `segment-offset = <2>`.
+Options: `CONFIG_ZMK_DONGLE_DISPLAY_MAC_MODIFIERS`, `CONFIG_ZMK_DONGLE_DISPLAY_WPM`, `CONFIG_ZMK_DONGLE_DISPLAY_DONGLE_BATTERY`
+(see `boards/shields/dongle_display/Kconfig.defconfig`).
 
 ## Layout Design
 ![central](./display_central.svg)

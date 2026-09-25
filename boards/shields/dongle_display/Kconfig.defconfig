@@ -1,0 +1,81 @@
+# Copyright (c) 2024 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+if SHIELD_DONGLE_DISPLAY
+
+choice ZMK_DISPLAY_STATUS_SCREEN
+    default ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
+endchoice
+
+config ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
+    select LV_USE_LABEL
+    select LV_USE_IMAGE
+    select LV_USE_CANVAS
+    select LV_USE_ANIMIMG 
+    select LV_USE_ANIMATION
+    select LV_USE_LINE 
+    select LV_FONT_UNSCII_8
+    select ZMK_WPM
+    imply ZMK_HID_INDICATORS
+
+config ZMK_DONGLE_DISPLAY_DONGLE_BATTERY
+    bool "Show also the battery level of the dongle"
+    depends on BT && (!ZMK_SPLIT_BLE || ZMK_SPLIT_ROLE_CENTRAL)
+
+config ZMK_DONGLE_DISPLAY_MAC_MODIFIERS
+    bool "Use MacOS modifier symbols instead of the Windows symbols"
+
+config ZMK_DONGLE_DISPLAY_BONGO_CAT
+    bool "Display the Bongo Cat widget"
+    default y
+
+config ZMK_DONGLE_DISPLAY_MODIFIERS
+    bool "Display the modifiers widget"
+    default y
+
+config ZMK_DONGLE_DISPLAY_LAYER
+    bool "Display the highest layer widget"
+    default y
+
+config ZMK_DONGLE_DISPLAY_LAYER_NAME_SCROLL_WIDTH
+    int "Width for layer name label (in pixels)"
+    default 50
+    help
+        Width in pixels for the layer name label. When the layer name
+        exceeds this width, it will scroll horizontally in a circular pattern.
+
+config ZMK_DONGLE_DISPLAY_LAYER_TEXT_ALIGN
+    string "Layer name text alignment"
+    default "left"
+    help
+        Text alignment for the layer name label. Valid values: "left", "center", "right".
+
+config ZMK_DONGLE_DISPLAY_WPM
+    bool "Display the WPM widget"
+    default n
+
+config ZMK_DONGLE_DISPLAY_WPM_DISABLED_LAYERS
+    string "Layers in which the widget is disabled, comma separated"
+    default ""
+
+choice ZMK_DISPLAY_WORK_QUEUE
+    default ZMK_DISPLAY_WORK_QUEUE_DEDICATED
+endchoice
+
+config LV_Z_MEM_POOL_SIZE
+    default 16384
+
+config LV_Z_VDB_SIZE
+    default 100
+
+config LV_DPI_DEF
+    default 148
+
+config LV_Z_BITS_PER_PIXEL
+    default 1
+
+choice LV_COLOR_DEPTH
+    default LV_COLOR_DEPTH_1
+endchoice
+
+endif

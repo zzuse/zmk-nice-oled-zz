@@ -50,7 +50,11 @@ static void draw_canvas(lv_obj_t *widget, struct status_state *state)
     rotate_canvas(phys_canvas, global_logic_canvas);
 
     // Draw animation
+#if IS_ENABLED(CONFIG_NICE_OLED_PERIPHERAL_CRYSTAL)
+    draw_animation(phys_canvas);
+#else
     draw_spaceman(phys_canvas);
+#endif
     lv_obj_invalidate(phys_canvas);
 }
 

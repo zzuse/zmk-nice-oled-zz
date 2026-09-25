@@ -78,6 +78,13 @@ config NICE_OLED_WIDGET_MASTER_TEST
     bool "Enable test widget on master"
     default n
 
+config NICE_OLED_PERIPHERAL_CRYSTAL
+    bool "Show the crystal animation on the peripheral instead of the spaceman"
+    default n
+    help
+        Useful when a dongle is the central and the former central half
+        should keep its crystal animation.
+
 config NICE_OLED_WIDGET_PERIPHERAL_TEST
     bool "Enable test widget on peripheral"
     default n
