@@ -56,8 +56,12 @@ The following Kconfig options are available:
     shield: sofle_dongle dongle_display
 ```
 The dongle shield defines the OLED node; for a 1.3" SH1106 use `compatible = "sinowealth,sh1106"` with `segment-offset = <2>`.
-Options: `CONFIG_ZMK_DONGLE_DISPLAY_MAC_MODIFIERS`, `CONFIG_ZMK_DONGLE_DISPLAY_WPM`, `CONFIG_ZMK_DONGLE_DISPLAY_DONGLE_BATTERY`
+Options: `CONFIG_ZMK_DONGLE_DISPLAY_MAC_MODIFIERS`, `CONFIG_ZMK_DONGLE_DISPLAY_WPM`, `CONFIG_ZMK_DONGLE_DISPLAY_DONGLE_BATTERY`,
+`CONFIG_ZMK_DONGLE_DISPLAY_KEY_STATUS` (last pressed key, default: y), `CONFIG_ZMK_DONGLE_DISPLAY_KEY_STATUS_WIDTH` (label width in px, default: 60)
 (see `boards/shields/dongle_display/Kconfig.defconfig`).
+
+Only the central sees keycodes, so with a dongle the last pressed key is shown on the dongle (left middle, below the
+output/WPM row), not on the halves.
 
 ## Layout Design
 ![central](./display_central.svg)
@@ -72,8 +76,16 @@ You can customize the display by:
 ## Widget Reference
 
 ### Keycode Widget
-Displays last pressed keycode  
+Displays last pressed keycode with modifier icons and the raw HID code (e.g. `BSPC 07:2A`) on a half acting as central  
 **File**: `widgets/keycode.[ch]`
+
+### Keycode Names
+Shared HID usage → short name table (`keycode_to_string()`), used by both the nice_oled and dongle key widgets  
+**File**: `widgets/keycode_name.[ch]`
+
+### Dongle Key Status Widget
+LVGL label on the dongle showing the last pressed key name; modifiers are shown by the dongle's own modifiers widget  
+**File**: `boards/shields/dongle_display/widgets/key_status.[ch]`
 
 ### Battery Widget
 Displays battery percentage and charging status  

@@ -12,6 +12,7 @@
 #include "widgets/output_status.h"
 #include "widgets/hid_indicators.h"
 #include "widgets/wpm_status.h"
+#include "widgets/key_status.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -42,6 +43,10 @@ static struct zmk_widget_bongo_cat bongo_cat_widget;
 static struct zmk_widget_wpm_status wpm_status_widget;
 #endif
 
+#if IS_ENABLED(CONFIG_ZMK_DONGLE_DISPLAY_KEY_STATUS)
+static struct zmk_widget_key_status key_status_widget;
+#endif
+
 lv_style_t global_style;
 
 lv_obj_t *zmk_display_status_screen() {
@@ -64,6 +69,11 @@ lv_obj_t *zmk_display_status_screen() {
 #if IS_ENABLED(CONFIG_ZMK_DONGLE_DISPLAY_WPM)
     zmk_widget_wpm_status_init(&wpm_status_widget, screen);
     lv_obj_align_to(zmk_widget_wpm_status_obj(&wpm_status_widget), zmk_widget_output_status_obj(&output_status_widget), LV_ALIGN_OUT_RIGHT_MID, 7, 0);
+#endif
+
+#if IS_ENABLED(CONFIG_ZMK_DONGLE_DISPLAY_KEY_STATUS)
+    zmk_widget_key_status_init(&key_status_widget, screen);
+    lv_obj_align(zmk_widget_key_status_obj(&key_status_widget), LV_ALIGN_LEFT_MID, 0, -6);
 #endif
 
 #if IS_ENABLED(CONFIG_ZMK_DONGLE_DISPLAY_BONGO_CAT)

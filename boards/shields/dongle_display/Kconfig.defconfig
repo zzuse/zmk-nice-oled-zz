@@ -50,6 +50,14 @@ config ZMK_DONGLE_DISPLAY_LAYER_TEXT_ALIGN
     help
         Text alignment for the layer name label. Valid values: "left", "center", "right".
 
+config ZMK_DONGLE_DISPLAY_KEY_STATUS
+    bool "Display the last pressed key"
+    default y
+
+config ZMK_DONGLE_DISPLAY_KEY_STATUS_WIDTH
+    int "Width for the last pressed key label (in pixels)"
+    default 60
+
 config ZMK_DONGLE_DISPLAY_WPM
     bool "Display the WPM widget"
     default n
