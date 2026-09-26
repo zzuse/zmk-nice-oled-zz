@@ -2,105 +2,147 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Project Overview
-The nice!oled shield is a ZMK firmware module that provides a customizable OLED status screen for mechanical keyboards. It displays system information such as battery level, active layer, modifiers, output profile, WPM, and keycodes. The module is designed to be easily integrated into ZMK-based keyboard firmware.
+A ZMK module that turns the cheap 128x32 SSD1306 OLEDs on split keyboards into a rich status screen —
+battery, layer, output profile, modifiers, WPM, last pressed key and small animations — plus an optional
+128x64 screen for a dongle that acts as the central.
 
-## Dependence
-   The main(development) branch dependent on ZMK 0.4 (the version currently in development), the west build command reflects significant changes in how Zephyr 4.1 handles hardware.  Underlying Libraries (The "Engine")
-   * Zephyr RTOS: Upgraded from 3.5 to 4.1. This changed how the keyboard handles power, Bluetooth, and USB.
-   * LVGL (Display): Upgraded from 8.3 to 9.x. This is why we had to rewrite your OLED code; the way the screen "draws" pixels was completely replaced with a more modern "layer-based" system.
-   Using tag version v0.3 For ZMK 0.3 stable build.
+<!-- TODO: add project photo -->
+<p align="center">
+  <img src="./images/overview.jpg" alt="nice!oled on a Sofle with dongle" width="720">
+</p>
 
-## Features
-- **Battery Status**: Shows current battery level and charging status
-- **Layer Display**: Indicates the currently active keyboard layer
-- **Modifier Keys**: Displays the state of modifier keys (Ctrl, Alt, Shift, etc.)
-- **Output Profiles**: Shows the active output profile (BLE, USB) and connection status
-- **WPM Counter**: Real-time words per minute tracking
-- **Keycode Display**: Shows the last pressed keycode
-- **Animations**: Optional animations (like Luna the dog) for visual feedback
-- **Custom Fonts**: Supports custom fonts (including PixelOperatorMono in multiple sizes)
-- **Inverted Color Scheme**: Configurable light/dark mode
+## Highlights
+- **Split-aware screens**: the central half and the peripheral half show different layouts
+- **Dongle support**: a vendored 128x64 dongle screen (SH1106/SSD1306) when a dongle is the central
+- **Status at a glance**: battery and charging, active layer, BLE profile / USB, modifiers, HID indicators (Caps Lock, …)
+- **Typing feedback**: WPM counter and the last pressed key
+- **Animations**: Luna the dog, crystal / spaceman, gem and Pokémon animations on the peripheral
+- **Stable on real hardware**: 400 kHz I2C, reboot instead of freezing on a fatal error
+- **Built on ZMK 0.4**: Zephyr 4.1 and LVGL 9
+
+## Supported Setups
+
+| Setup | Shields | What each screen shows |
+|---|---|---|
+| Split, half as central | `<kb>_left nice_oled`, `<kb>_right nice_oled` | Central: output, layer, modifiers, WPM, keycode. Peripheral: battery and animation |
+| Split with dongle | `<kb>_dongle dongle_display`, `<kb>_left nice_oled`, `<kb>_right nice_oled` | Dongle: everything above on 128x64. Both halves: peripheral screen |
+
+Only the central receives keycodes, layers and modifiers, so with a dongle those widgets live on the dongle.
+
+## Layout
+| Central (128x32) | Peripheral (128x32) |
+|---|---|
+| ![central](./display_central.svg) | ![peripheral](./display_peripheral.svg) |
+
+Pixel-level layout notes: [LAYOUT_DESIGN_v0.4.md](./LAYOUT_DESIGN_v0.4.md).
+
+## Requirements
+- `main` branch: ZMK 0.4 (in development) — Zephyr 4.1 and LVGL 9.x. The LVGL 9 layer-based drawing required
+  rewriting the OLED code, so this branch does not build against older ZMK.
+- Tag `v0.3`: ZMK 0.3 stable (Zephyr 3.5, LVGL 8.3).
 
 ## Installation
-To use the nice!oled shield in your ZMK firmware:
 
-1. Add this repository as a Zephyr module in your `zmk-config`:
-   ```bash
-   west.yml: 
-     - name: zmk-nice-oled-zz
-       url: https://github.com/zzuse/zmk-nice-oled-zz
-       revision: main
+1. Add the module to `config/west.yml` in your `zmk-config`:
+   ```yaml
+   manifest:
+     remotes:
+       - name: zzuse
+         url-base: https://github.com/zzuse
+     projects:
+       - name: zmk-nice-oled-zz
+         remote: zzuse
+         revision: main
    ```
 
-2. Enable the shield in your `.conf` file:
+2. Add the shield to `build.yaml`:
+   ```yaml
+   include:
+     - board: nice_nano//zmk
+       shield: sofle_left nice_oled
+     - board: nice_nano//zmk
+       shield: sofle_right nice_oled
    ```
-   CONFIG_NICE_VIEW_WIDGET=y
+
+3. Make sure the display is on in your `.conf`:
+   ```
    CONFIG_ZMK_DISPLAY=y
    ```
 
-3. Add the shield to your keyboard's `.keymap` file
-
-## Configuration
-The following Kconfig options are available:
-- `CONFIG_NICE_VIEW_WIDGET_INVERTED`: Invert display colors (default: n)
-- `CONFIG_NICE_VIEW_WIDGET_STATUS`: Enable status screen (default: y)
-- `CONFIG_NICE_VIEW_WIDGET_ANIMATION`: Enable animations (default: y)
-- `CONFIG_NICE_OLED_PERIPHERAL_CRYSTAL`: Show the crystal animation on a peripheral instead of the spaceman, e.g. when a dongle is the central (default: n)
-
-## Dongle Display
-`boards/shields/dongle_display` is a 128x64 status screen for a dongle (central), vendored from
-[englmaxi/zmk-dongle-display](https://github.com/englmaxi/zmk-dongle-display) (MIT). Add it next to your dongle shield:
+### Dongle
+Add the dongle build next to the halves:
 ```yaml
   - board: nice_nano//zmk
     shield: sofle_dongle dongle_display
 ```
-The dongle shield defines the OLED node; for a 1.3" SH1106 use `compatible = "sinowealth,sh1106"` with `segment-offset = <2>`.
-Options: `CONFIG_ZMK_DONGLE_DISPLAY_MAC_MODIFIERS`, `CONFIG_ZMK_DONGLE_DISPLAY_WPM`, `CONFIG_ZMK_DONGLE_DISPLAY_DONGLE_BATTERY`,
-`CONFIG_ZMK_DONGLE_DISPLAY_KEY_STATUS` (last pressed key, default: y), `CONFIG_ZMK_DONGLE_DISPLAY_KEY_STATUS_WIDTH` (label width in px, default: 60)
-(see `boards/shields/dongle_display/Kconfig.defconfig`).
+- The dongle shield defines the `&oled` node. For a 1.3" SH1106 use `compatible = "sinowealth,sh1106"`,
+  `height = <64>`, `multiplex-ratio = <63>`, `segment-offset = <2>`.
+- The former central half must be a peripheral (`CONFIG_ZMK_SPLIT_ROLE_CENTRAL=n`). Set
+  `CONFIG_NICE_OLED_PERIPHERAL_CRYSTAL=y` on it to keep the crystal animation.
+- To rotate the dongle screen 180°, delete `segment-remap` and `com-invdir` from `&oled`. To swap black and
+  white, delete `inversion-on`.
 
-Only the central sees keycodes, so with a dongle the last pressed key is shown on the dongle (left middle, below the
-output/WPM row), not on the halves.
+## Configuration
 
-## Layout Design
-![central](./display_central.svg)
-![peripheral](./display_peripheral.svg)
+### nice_oled (halves)
+| Option | Default | Description |
+|---|---|---|
+| `CONFIG_NICE_OLED_WIDGET_WPM` | y | WPM widget on the central |
+| `CONFIG_NICE_OLED_WIDGET_WPM_LUNA` | y | Luna the dog reacts to WPM |
+| `CONFIG_NICE_OLED_WIDGET_HID_INDICATORS` | y | Caps/Num/Scroll lock indicators |
+| `CONFIG_NICE_OLED_WIDGET_MODIFIERS_INDICATORS` | y | Modifier indicators |
+| `CONFIG_NICE_OLED_GEM_ANIMATION` | y | Gem animation on the peripheral |
+| `CONFIG_NICE_OLED_POKEMON_ANIMATION` | n | Pokémon animation on the peripheral |
+| `CONFIG_NICE_OLED_PERIPHERAL_CRYSTAL` | n | Crystal instead of spaceman on the peripheral (useful with a dongle) |
+| `CONFIG_NICE_OLED_REBOOT_ON_FATAL` | y | Reboot instead of halting on a fatal error |
+| `CONFIG_NICE_VIEW_WIDGET_INVERTED` | n | Invert display colors |
+
+See `boards/shields/nice_oled/Kconfig.defconfig` for animation timings and the rest.
+
+### dongle_display (dongle)
+| Option | Default | Description |
+|---|---|---|
+| `CONFIG_ZMK_DONGLE_DISPLAY_KEY_STATUS` | y | Last pressed key (left middle, below the output/WPM row) |
+| `CONFIG_ZMK_DONGLE_DISPLAY_KEY_STATUS_WIDTH` | 60 | Key label width in pixels |
+| `CONFIG_ZMK_DONGLE_DISPLAY_WPM` | n | WPM next to the output status |
+| `CONFIG_ZMK_DONGLE_DISPLAY_BONGO_CAT` | y | Bongo Cat animation |
+| `CONFIG_ZMK_DONGLE_DISPLAY_MODIFIERS` | y | Modifier symbols |
+| `CONFIG_ZMK_DONGLE_DISPLAY_MAC_MODIFIERS` | n | macOS modifier symbols instead of Windows |
+| `CONFIG_ZMK_DONGLE_DISPLAY_LAYER` | y | Highest active layer name |
+| `CONFIG_ZMK_DONGLE_DISPLAY_DONGLE_BATTERY` | n | Also show the dongle's own battery |
+
+See `boards/shields/dongle_display/Kconfig.defconfig` for the rest.
+
+## Project Structure
+```
+boards/shields/
+├── nice_oled/              128x32 screen for the halves
+│   ├── widgets/            screen.c (central), screen_peripheral.c, one file per widget
+│   └── assets/             fonts (PixelOperatorMono 8/12/16), images, animations
+└── dongle_display/         128x64 screen for a dongle, vendored from englmaxi/zmk-dongle-display
+    └── widgets/            LVGL object widgets (output, battery, layer, bongo cat, key status, …)
+```
+
+### Widget Reference
+| Widget | File | Description |
+|---|---|---|
+| Battery | `nice_oled/widgets/battery.[ch]` | Battery percentage and charging status |
+| Layer | `nice_oled/widgets/layer.[ch]` | Active layer |
+| Output | `nice_oled/widgets/output.[ch]` | Active output profile (BLE/USB) |
+| Keycode | `nice_oled/widgets/keycode.[ch]` | Last key with modifier icons and raw HID code (e.g. `BSPC 07:2A`) on a central half |
+| Keycode names | `nice_oled/widgets/keycode_name.[ch]` | Shared HID usage → short name table (`keycode_to_string()`), used by both key widgets |
+| Dongle key status | `dongle_display/widgets/key_status.[ch]` | Last key name as an LVGL label on the dongle |
 
 ## Customization
-You can customize the display by:
-- Adding custom fonts in `boards/shields/nice_oled/assets/`
-- Adding custom images for animations
-- Modifying the widget layouts in `boards/shields/nice_oled/widgets/`
+- Fonts and images: `boards/shields/nice_oled/assets/` (see the assets README)
+- Widget layout of the halves: `boards/shields/nice_oled/widgets/`
+- Widget layout of the dongle: `boards/shields/dongle_display/custom_status_screen.c`
 
-## Widget Reference
-
-### Keycode Widget
-Displays last pressed keycode with modifier icons and the raw HID code (e.g. `BSPC 07:2A`) on a half acting as central  
-**File**: `widgets/keycode.[ch]`
-
-### Keycode Names
-Shared HID usage → short name table (`keycode_to_string()`), used by both the nice_oled and dongle key widgets  
-**File**: `widgets/keycode_name.[ch]`
-
-### Dongle Key Status Widget
-LVGL label on the dongle showing the last pressed key name; modifiers are shown by the dongle's own modifiers widget  
-**File**: `boards/shields/dongle_display/widgets/key_status.[ch]`
-
-### Battery Widget
-Displays battery percentage and charging status  
-**File**: `widgets/battery.[ch]`
-
-### Layer Widget
-Shows currently active layer  
-**File**: `widgets/layer.[ch]`
-
-### Output Widget
-Displays active output profile (BLE/USB)  
-**File**: `widgets/output.[ch]`
+## Credits
+- Dongle screen based on [englmaxi/zmk-dongle-display](https://github.com/englmaxi/zmk-dongle-display) (MIT)
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
 ## Contributors
-- zzuse (Maintainer) Modify to suit my own needs
+- zzuse (Maintainer) — modified to suit my own needs
