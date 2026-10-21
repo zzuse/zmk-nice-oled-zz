@@ -109,7 +109,7 @@ See `boards/shields/nice_oled/Kconfig.defconfig` for animation timings and the r
 | `CONFIG_ZMK_DONGLE_DISPLAY_MODIFIERS` | y | Modifier symbols |
 | `CONFIG_ZMK_DONGLE_DISPLAY_MAC_MODIFIERS` | n | macOS modifier symbols instead of Windows |
 | `CONFIG_ZMK_DONGLE_DISPLAY_LAYER` | y | Highest active layer name |
-| `CONFIG_ZMK_DONGLE_DISPLAY_DONGLE_BATTERY` | n | Also show the dongle's own battery |
+| `CONFIG_ZMK_DONGLE_DISPLAY_DONGLE_BATTERY` | y | Dongle's own battery, on the row below the halves' batteries (top right) |
 
 See `boards/shields/dongle_display/Kconfig.defconfig` for the rest.
 
