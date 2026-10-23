@@ -32,8 +32,11 @@ config LV_Z_MEM_POOL_SIZE
 
 config NICE_OLED_REBOOT_ON_FATAL
     bool "Reboot instead of halting on a fatal error"
-    default y
+    default n
     select REBOOT
+    help
+      Rebooting from the fatal handler drops Zephyr's deferred fault log, so a
+      crash shows up only as a reboot loop. Leave off while debugging.
 
 config ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
     imply NICE_VIEW_WIDGET_STATUS

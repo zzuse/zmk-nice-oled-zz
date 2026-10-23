@@ -94,7 +94,8 @@ Add the dongle build next to the halves:
 | `CONFIG_NICE_OLED_GEM_ANIMATION` | y | Gem animation on the peripheral |
 | `CONFIG_NICE_OLED_POKEMON_ANIMATION` | n | Pokémon animation on the peripheral |
 | `CONFIG_NICE_OLED_PERIPHERAL_CRYSTAL` | n | Crystal instead of spaceman on the peripheral (useful with a dongle) |
-| `CONFIG_NICE_OLED_REBOOT_ON_FATAL` | y | Reboot instead of halting on a fatal error |
+| `CONFIG_NICE_OLED_REBOOT_ON_FATAL` | n | Reboot instead of halting on a fatal error (hides the crash log, so off by default) |
+| `CONFIG_ZMK_DISPLAY_DEDICATED_THREAD_STACK_SIZE` | 4096 | Display thread stack (ZMK's 3072 overflows on the central) |
 | `CONFIG_NICE_VIEW_WIDGET_INVERTED` | n | Invert display colors |
 
 See `boards/shields/nice_oled/Kconfig.defconfig` for animation timings and the rest.
